@@ -409,15 +409,23 @@ MIT
 
 ## Documentation
 
-- [Architecture Overview](./ARCHITECTURE.md) - System design and service interactions
-- [Folder Structure](./FOLDER_STRUCTURE.md) - Project organization
-- [Chaos Engineering](./CHAOS_ENGINEERING_SUMMARY.md) - Resilience testing guide
+### 📚 Main Documentation
+- [Complete Documentation](./docs/README.md) - Full documentation index
+- [Architecture Overview](./docs/architecture/ARCHITECTURE.md) - System design
+- [Quick Start Guide](./docs/guides/QUICK_START.md) - Get started quickly
+- [Deployment Guide](./docs/deployment/CLOUD_DEPLOYMENT.md) - Deploy to cloud
+- [Security Architecture](./docs/security/ARCHITECTURE.md) - Security design
+- [Troubleshooting](./docs/troubleshooting/TROUBLESHOOTING.md) - Common issues
+
+### 🔧 Service Documentation
 - [Identity Provider](./services/identity-provider/README.md) - Authentication service
 - [Order Gateway](./services/order-gateway/README.md) - API gateway
 - [Stock Service](./services/stock-service/README.md) - Inventory management
 - [Kitchen Queue](./services/kitchen-queue/README.md) - Async processing
 - [Notification Hub](./services/notification-hub/README.md) - Real-time updates
 - [Chaos Monkey](./services/chaos-monkey/README.md) - Chaos engineering service
+
+### 🎨 Frontend Documentation
 - [Client Application](./client/README.md) - Web UI
 - [Admin Dashboard](./admin-dashboard/README.md) - Monitoring dashboard
 
