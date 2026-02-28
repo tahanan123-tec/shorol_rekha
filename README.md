@@ -6,23 +6,24 @@ A production-grade microservices architecture designed to handle extreme traffic
 
 ```bash
 # 1. Clone the repository
-git clone <repository-url>
-cd cafeteria-ordering-system
+git clone https://github.com/tahanan123-tec/shorol_rekha.git
+cd shorol_rekha
 
-# 2. Generate JWT keys
-make keys
+# 2. Setup environment files
+./scripts/deployment/setup-env-files.ps1
 
-# 3. Copy environment file
-cp .env.example .env
+# 3. Deploy all services
+./scripts/deployment/deploy-all.ps1
 
-# 4. Start all services
-make up
+# 4. Check service health
+./scripts/deployment/check-status.ps1
+```
 
-# 5. Seed sample data (optional)
-make seed
-
-# 6. Check health
-make health
+**Alternative using Make:**
+```bash
+make keys    # Generate JWT keys
+make up      # Start all services
+make health  # Check health
 ```
 
 Access the system:
