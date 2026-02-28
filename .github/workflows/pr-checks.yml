@@ -1,0 +1,143 @@
+name: Pull Request Checks
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # Quick validation checks
+  validate:
+    name: Validate PR
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check commit messages
+        run: |
+          echo "Checking commit messages..."
+          git log --format=%B origin/${{ github.base_ref }}..HEAD | grep -v "^$" | while read msg; do
+            if ! echo "$msg" | grep -qE "^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\(.+\))?: .+"; then
+              echo "Invalid commit message: $msg"
+              echo "Please follow conventional commits format"
+              exit 1
+            fi
+          done
+
+      - name: Check for merge conflicts
+        run: |
+          if git diff --name-only --diff-filter=U | grep -q .; then
+            echo "Merge conflicts detected"
+            exit 1
+          fi
+
+      - name: Check file sizes
+        run: |
+          large_files=$(find . -type f -size +5M -not -path "./.git/*" -not -path "./node_modules/*")
+          if [ -n "$large_files" ]; then
+            echo "Large files detected (>5MB):"
+            echo "$large_files"
+            exit 1
+          fi
+
+  # Code quality checks
+  quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          npm install -g eslint prettier
+
+      - name: Run ESLint
+        run: |
+          for service in services/*/; do
+            if [ -f "$service/package.json" ]; then
+              echo "Linting $service"
+              cd $service && npm ci && npm run lint --if-present || true
+              cd ../..
+            fi
+          done
+
+      - name: Check code formatting
+        run: |
+          npx prettier --check "**/*.{js,jsx,ts,tsx,json,css,md}" || true
+
+  # Dependency checks
+  dependencies:
+    name: Dependency Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for outdated dependencies
+        run: |
+          for service in services/*/package.json; do
+            dir=$(dirname $service)
+            echo "Checking $dir"
+            cd $dir && npm outdated || true
+            cd ../..
+          done
+
+      - name: Check for security vulnerabilities
+        run: |
+          for service in services/*/package.json; do
+            dir=$(dirname $service)
+            echo "Auditing $dir"
+            cd $dir && npm audit --audit-level=high || true
+            cd ../..
+          done
+
+  # Performance checks
+  performance:
+    name: Performance Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Build and check bundle size
+        run: |
+          cd client
+          npm ci
+          npm run build
+          
+          # Check bundle size
+          bundle_size=$(du -sh .next | cut -f1)
+          echo "Client bundle size: $bundle_size"
+
+      - name: Comment PR with bundle size
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '📦 Bundle size check completed. See workflow logs for details.'
+            })

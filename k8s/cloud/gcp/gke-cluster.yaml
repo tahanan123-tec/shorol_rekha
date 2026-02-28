@@ -1,0 +1,146 @@
+# GCP GKE Cluster Configuration
+# Deploy using gcloud CLI or Terraform
+
+# Create cluster command:
+# gcloud container clusters create cafeteria-cluster \
+#   --region=us-central1 \
+#   --num-nodes=3 \
+#   --machine-type=n1-standard-4 \
+#   --enable-autoscaling \
+#   --min-nodes=2 \
+#   --max-nodes=10 \
+#   --enable-autorepair \
+#   --enable-autoupgrade \
+#   --enable-stackdriver-kubernetes \
+#   --addons=HorizontalPodAutoscaling,HttpLoadBalancing,GcePersistentDiskCsiDriver \
+#   --workload-pool=PROJECT_ID.svc.id.goog \
+#   --enable-shielded-nodes \
+#   --shielded-secure-boot \
+#   --shielded-integrity-monitoring
+
+apiVersion: container.cnrm.cloud.google.com/v1beta1
+kind: ContainerCluster
+metadata:
+  name: cafeteria-cluster
+  namespace: default
+spec:
+  location: us-central1
+  initialNodeCount: 1
+  removeDefaultNodePool: true
+  
+  # Network Configuration
+  networkRef:
+    name: cafeteria-network
+  subnetworkRef:
+    name: cafeteria-subnet
+  
+  # IP Allocation
+  ipAllocationPolicy:
+    clusterSecondaryRangeName: pods
+    servicesSecondaryRangeName: services
+  
+  # Master Auth
+  masterAuth:
+    clientCertificateConfig:
+      issueClientCertificate: false
+  
+  # Addons
+  addonsConfig:
+    horizontalPodAutoscaling:
+      disabled: false
+    httpLoadBalancing:
+      disabled: false
+    gcePersistentDiskCsiDriverConfig:
+      enabled: true
+    networkPolicyConfig:
+      disabled: false
+  
+  # Workload Identity
+  workloadIdentityConfig:
+    workloadPool: PROJECT_ID.svc.id.goog
+  
+  # Logging & Monitoring
+  loggingService: logging.googleapis.com/kubernetes
+  monitoringService: monitoring.googleapis.com/kubernetes
+  
+  # Security
+  shieldedNodes:
+    enabled: true
+  
+  # Maintenance Window
+  maintenancePolicy:
+    window:
+      dailyMaintenanceWindow:
+        startTime: "03:00"
+
+---
+apiVersion: container.cnrm.cloud.google.com/v1beta1
+kind: ContainerNodePool
+metadata:
+  name: general-purpose-pool
+  namespace: default
+spec:
+  clusterRef:
+    name: cafeteria-cluster
+  location: us-central1
+  initialNodeCount: 3
+  
+  autoscaling:
+    minNodeCount: 2
+    maxNodeCount: 10
+  
+  management:
+    autoRepair: true
+    autoUpgrade: true
+  
+  nodeConfig:
+    machineType: n1-standard-4
+    diskSizeGb: 50
+    diskType: pd-ssd
+    preemptible: false
+    
+    oauthScopes:
+      - https://www.googleapis.com/auth/cloud-platform
+    
+    labels:
+      role: general
+    
+    metadata:
+      disable-legacy-endpoints: "true"
+    
+    shieldedInstanceConfig:
+      enableSecureBoot: true
+      enableIntegrityMonitoring: true
+
+---
+apiVersion: container.cnrm.cloud.google.com/v1beta1
+kind: ContainerNodePool
+metadata:
+  name: high-memory-pool
+  namespace: default
+spec:
+  clusterRef:
+    name: cafeteria-cluster
+  location: us-central1
+  initialNodeCount: 2
+  
+  autoscaling:
+    minNodeCount: 1
+    maxNodeCount: 5
+  
+  management:
+    autoRepair: true
+    autoUpgrade: true
+  
+  nodeConfig:
+    machineType: n1-highmem-4
+    diskSizeGb: 100
+    diskType: pd-ssd
+    
+    labels:
+      role: database
+    
+    taints:
+      - key: workload
+        value: database
+        effect: NO_SCHEDULE

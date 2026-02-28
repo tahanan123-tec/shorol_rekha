@@ -1,0 +1,128 @@
+# Azure AKS Cluster Configuration
+# Deploy using Azure CLI or Terraform
+
+# Create cluster command:
+# az aks create \
+#   --resource-group cafeteria-rg \
+#   --name cafeteria-cluster \
+#   --location eastus \
+#   --node-count 3 \
+#   --node-vm-size Standard_D4s_v3 \
+#   --enable-cluster-autoscaler \
+#   --min-count 2 \
+#   --max-count 10 \
+#   --enable-addons monitoring \
+#   --enable-managed-identity \
+#   --network-plugin azure \
+#   --network-policy azure \
+#   --load-balancer-sku standard \
+#   --vm-set-type VirtualMachineScaleSets \
+#   --kubernetes-version 1.28.0
+
+apiVersion: containerservice.azure.com/v1
+kind: ManagedCluster
+metadata:
+  name: cafeteria-cluster
+  location: eastus
+spec:
+  # Kubernetes Version
+  kubernetesVersion: "1.28.0"
+  
+  # DNS Prefix
+  dnsPrefix: cafeteria
+  
+  # Network Profile
+  networkProfile:
+    networkPlugin: azure
+    networkPolicy: azure
+    loadBalancerSku: standard
+    serviceCidr: 10.0.0.0/16
+    dnsServiceIP: 10.0.0.10
+    dockerBridgeCidr: 172.17.0.1/16
+  
+  # Agent Pool Profiles
+  agentPoolProfiles:
+    # System Node Pool
+    - name: systempool
+      count: 3
+      vmSize: Standard_D2s_v3
+      osType: Linux
+      mode: System
+      enableAutoScaling: true
+      minCount: 2
+      maxCount: 5
+      availabilityZones:
+        - "1"
+        - "2"
+        - "3"
+      nodeTaints:
+        - CriticalAddonsOnly=true:NoSchedule
+    
+    # General Purpose Pool
+    - name: generalpool
+      count: 3
+      vmSize: Standard_D4s_v3
+      osType: Linux
+      mode: User
+      enableAutoScaling: true
+      minCount: 2
+      maxCount: 10
+      availabilityZones:
+        - "1"
+        - "2"
+        - "3"
+      nodeLabels:
+        role: general
+    
+    # High Memory Pool
+    - name: memorypool
+      count: 2
+      vmSize: Standard_E4s_v3
+      osType: Linux
+      mode: User
+      enableAutoScaling: true
+      minCount: 1
+      maxCount: 5
+      availabilityZones:
+        - "1"
+        - "2"
+      nodeLabels:
+        role: database
+      nodeTaints:
+        - workload=database:NoSchedule
+  
+  # Identity
+  identity:
+    type: SystemAssigned
+  
+  # Add-ons
+  addonProfiles:
+    omsagent:
+      enabled: true
+      config:
+        logAnalyticsWorkspaceResourceID: /subscriptions/SUBSCRIPTION_ID/resourceGroups/cafeteria-rg/providers/Microsoft.OperationalInsights/workspaces/cafeteria-logs
+    azurepolicy:
+      enabled: true
+    azureKeyvaultSecretsProvider:
+      enabled: true
+      config:
+        enableSecretRotation: "true"
+  
+  # Auto Scaler Profile
+  autoScalerProfile:
+    scaleDownDelayAfterAdd: 10m
+    scaleDownUnneededTime: 10m
+    scaleDownUtilizationThreshold: "0.5"
+    maxGracefulTerminationSec: "600"
+  
+  # API Server Access
+  apiServerAccessProfile:
+    enablePrivateCluster: false
+    authorizedIPRanges:
+      - 0.0.0.0/0  # Update with your IP ranges
+  
+  # Security
+  enableRBAC: true
+  aadProfile:
+    managed: true
+    enableAzureRBAC: true

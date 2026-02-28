@@ -1,0 +1,109 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cafeteria-ingress
+  namespace: cafeteria-system
+  annotations:
+    # AWS ALB Annotations
+    kubernetes.io/ingress.class: "alb"
+    alb.ingress.kubernetes.io/scheme: "internet-facing"
+    alb.ingress.kubernetes.io/target-type: "ip"
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/certificate-arn: "arn:aws:acm:region:account-id:certificate/cert-id"
+    alb.ingress.kubernetes.io/healthcheck-path: "/health"
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: "15"
+    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: "5"
+    alb.ingress.kubernetes.io/healthy-threshold-count: "2"
+    alb.ingress.kubernetes.io/unhealthy-threshold-count: "2"
+    
+    # GCP GKE Annotations
+    kubernetes.io/ingress.global-static-ip-name: "cafeteria-ip"
+    networking.gke.io/managed-certificates: "cafeteria-cert"
+    kubernetes.io/ingress.allow-http: "false"
+    
+    # Azure AKS Annotations
+    kubernetes.io/ingress.class: "azure/application-gateway"
+    appgw.ingress.kubernetes.io/ssl-redirect: "true"
+    appgw.ingress.kubernetes.io/connection-draining: "true"
+    appgw.ingress.kubernetes.io/connection-draining-timeout: "30"
+    
+    # Rate Limiting
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/limit-rps: "50"
+    
+    # CORS
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
+    
+spec:
+  rules:
+  - host: api.cafeteria.example.com
+    http:
+      paths:
+      - path: /api/auth
+        pathType: Prefix
+        backend:
+          service:
+            name: identity-provider-service
+            port:
+              number: 3001
+      - path: /api/orders
+        pathType: Prefix
+        backend:
+          service:
+            name: order-gateway-service
+            port:
+              number: 3002
+      - path: /api/stock
+        pathType: Prefix
+        backend:
+          service:
+            name: stock-service
+            port:
+              number: 3003
+      - path: /api/kitchen
+        pathType: Prefix
+        backend:
+          service:
+            name: kitchen-queue-service
+            port:
+              number: 3004
+  - host: app.cafeteria.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: client-service
+            port:
+              number: 3000
+  - host: admin.cafeteria.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: admin-dashboard-service
+            port:
+              number: 3100
+  - host: ws.cafeteria.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: notification-hub-service
+            port:
+              number: 3005
+  tls:
+  - hosts:
+    - api.cafeteria.example.com
+    - app.cafeteria.example.com
+    - admin.cafeteria.example.com
+    - ws.cafeteria.example.com
+    secretName: cafeteria-tls

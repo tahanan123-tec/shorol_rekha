@@ -1,0 +1,72 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+pnpm-lock.yaml
+
+# Environment files
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+**/.env
+
+# Secrets & Keys
+secrets/
+*.pem
+*.key
+jwt_private_key
+jwt_public_key
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Build
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock

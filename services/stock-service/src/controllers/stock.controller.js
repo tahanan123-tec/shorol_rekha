@@ -1,0 +1,178 @@
+const stockService = require('../services/stock.service');
+const logger = require('../utils/logger');
+
+/**
+ * GET /stock/:itemId
+ * Get stock information for an item
+ */
+const getStock = async (req, res, next) => {
+  try {
+    const { itemId } = req.params;
+
+    const stock = await stockService.getStock(itemId);
+
+    res.status(200).json({
+      success: true,
+      data: stock,
+    });
+  } catch (error) {
+    if (error.statusCode === 404) {
+      return res.status(404).json({
+        success: false,
+        error: error.message,
+      });
+    }
+    next(error);
+  }
+};
+
+/**
+ * GET /stock
+ * Get all stock items
+ */
+const getAllStock = async (req, res, next) => {
+  try {
+    const stock = await stockService.getAllStock();
+
+    res.status(200).json({
+      success: true,
+      data: {
+        items: stock,
+        count: stock.length,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /internal/stock/check
+ * Check stock availability (internal endpoint)
+ */
+const checkStock = async (req, res, next) => {
+  try {
+    const { items } = req.body;
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Items array is required',
+      });
+    }
+
+    const result = await stockService.checkStock(items);
+
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /internal/stock/reserve
+ * Reserve stock for an order (internal endpoint)
+ */
+const reserveStock = async (req, res, next) => {
+  try {
+    const { order_id, items } = req.body;
+
+    if (!order_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'order_id is required',
+      });
+    }
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Items array is required',
+      });
+    }
+
+    const result = await stockService.reserveStock(order_id, items);
+
+    res.status(200).json({
+      success: true,
+      message: 'Stock reserved successfully',
+      data: result,
+    });
+  } catch (error) {
+    if (error.statusCode === 404) {
+      return res.status(404).json({
+        success: false,
+        error: error.message,
+      });
+    }
+
+    if (error.statusCode === 409) {
+      return res.status(409).json({
+        success: false,
+        error: error.message,
+        details: error.details,
+      });
+    }
+
+    next(error);
+  }
+};
+
+/**
+ * POST /stock/decrement
+ * Decrement stock (idempotent)
+ */
+const decrementStock = async (req, res, next) => {
+  try {
+    const { order_id, items, transaction_id } = req.body;
+
+    if (!order_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'order_id is required',
+      });
+    }
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Items array is required',
+      });
+    }
+
+    const result = await stockService.decrementStock(order_id, items, transaction_id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Stock decremented successfully',
+      data: result,
+    });
+  } catch (error) {
+    if (error.statusCode === 404) {
+      return res.status(404).json({
+        success: false,
+        error: error.message,
+      });
+    }
+
+    if (error.statusCode === 409) {
+      return res.status(409).json({
+        success: false,
+        error: error.message,
+      });
+    }
+
+    next(error);
+  }
+};
+
+module.exports = {
+  getStock,
+  getAllStock,
+  checkStock,
+  reserveStock,
+  decrementStock,
+};

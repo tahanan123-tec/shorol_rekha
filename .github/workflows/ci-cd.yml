@@ -1,0 +1,403 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+
+env:
+  NODE_VERSION: '20'
+  DOCKER_REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository }}
+
+jobs:
+  # Job 1: Run tests in parallel for all services
+  test:
+    name: Test - ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - identity-provider
+          - order-gateway
+          - stock-service
+          - kitchen-queue
+          - notification-hub
+          - client
+          - admin-dashboard
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: |
+            services/${{ matrix.service }}/package-lock.json
+            ${{ matrix.service }}/package-lock.json
+
+      - name: Cache node modules
+        uses: actions/cache@v3
+        with:
+          path: |
+            services/${{ matrix.service }}/node_modules
+            ${{ matrix.service }}/node_modules
+          key: ${{ runner.os }}-node-${{ matrix.service }}-${{ hashFiles(format('services/{0}/package-lock.json', matrix.service), format('{0}/package-lock.json', matrix.service)) }}
+          restore-keys: |
+            ${{ runner.os }}-node-${{ matrix.service }}-
+
+      - name: Install dependencies (Service)
+        if: matrix.service != 'client' && matrix.service != 'admin-dashboard'
+        working-directory: services/${{ matrix.service }}
+        run: npm ci
+
+      - name: Install dependencies (Client/Dashboard)
+        if: matrix.service == 'client' || matrix.service == 'admin-dashboard'
+        working-directory: ${{ matrix.service }}
+        run: npm ci
+
+      - name: Run linter (Service)
+        if: matrix.service != 'client' && matrix.service != 'admin-dashboard'
+        working-directory: services/${{ matrix.service }}
+        run: npm run lint --if-present
+        continue-on-error: true
+
+      - name: Run linter (Client/Dashboard)
+        if: matrix.service == 'client' || matrix.service == 'admin-dashboard'
+        working-directory: ${{ matrix.service }}
+        run: npm run lint --if-present
+        continue-on-error: true
+
+      - name: Run unit tests (Service)
+        if: matrix.service != 'client' && matrix.service != 'admin-dashboard'
+        working-directory: services/${{ matrix.service }}
+        run: npm test --if-present
+        env:
+          NODE_ENV: test
+
+      - name: Run tests (Client/Dashboard)
+        if: matrix.service == 'client' || matrix.service == 'admin-dashboard'
+        working-directory: ${{ matrix.service }}
+        run: npm test --if-present
+        env:
+          NODE_ENV: test
+
+      - name: Upload test coverage
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-${{ matrix.service }}
+          path: |
+            services/${{ matrix.service }}/coverage
+            ${{ matrix.service }}/coverage
+          retention-days: 7
+
+  # Job 2: Integration tests (runs after unit tests)
+  integration-test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: test
+    
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+      rabbitmq:
+        image: rabbitmq:3-management-alpine
+        env:
+          RABBITMQ_DEFAULT_USER: test
+          RABBITMQ_DEFAULT_PASS: test
+        options: >-
+          --health-cmd "rabbitmq-diagnostics ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5672:5672
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Cache node modules
+        uses: actions/cache@v3
+        with:
+          path: |
+            services/*/node_modules
+          key: ${{ runner.os }}-integration-${{ hashFiles('services/*/package-lock.json') }}
+
+      - name: Install dependencies
+        run: |
+          cd services/identity-provider && npm ci
+          cd ../order-gateway && npm ci
+          cd ../stock-service && npm ci
+
+      - name: Run integration tests
+        run: |
+          cd services/identity-provider && npm run test:integration --if-present
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://test:test@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379
+          RABBITMQ_URL: amqp://test:test@localhost:5672
+
+  # Job 3: Build Docker images
+  build:
+    name: Build - ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - identity-provider
+          - order-gateway
+          - stock-service
+          - kitchen-queue
+          - notification-hub
+          - client
+          - admin-dashboard
+    
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.DOCKER_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ matrix.service }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image (Service)
+        if: matrix.service != 'client' && matrix.service != 'admin-dashboard'
+        uses: docker/build-push-action@v5
+        with:
+          context: ./services/${{ matrix.service }}
+          file: ./services/${{ matrix.service }}/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NODE_ENV=production
+
+      - name: Build and push Docker image (Client/Dashboard)
+        if: matrix.service == 'client' || matrix.service == 'admin-dashboard'
+        uses: docker/build-push-action@v5
+        with:
+          context: ./${{ matrix.service }}
+          file: ./${{ matrix.service }}/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NODE_ENV=production
+            NEXT_PUBLIC_API_URL=${{ secrets.API_URL }}
+            NEXT_PUBLIC_WS_URL=${{ secrets.WS_URL }}
+            NEXT_PUBLIC_PROMETHEUS_URL=${{ secrets.PROMETHEUS_URL }}
+
+  # Job 4: Security scanning
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Run npm audit
+        run: |
+          for service in services/*/package.json; do
+            dir=$(dirname $service)
+            echo "Auditing $dir"
+            cd $dir && npm audit --audit-level=moderate || true
+            cd ../..
+          done
+
+  # Job 5: Deploy (optional, only on main branch)
+  deploy:
+    name: Deploy to ${{ matrix.environment }}
+    runs-on: ubuntu-latest
+    needs: [test, integration-test, build]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    strategy:
+      matrix:
+        environment:
+          - staging
+          # - production  # Uncomment for production deployment
+    
+    environment:
+      name: ${{ matrix.environment }}
+      url: ${{ steps.deploy.outputs.url }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (if using AWS)
+        if: false  # Enable if using AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Deploy to Kubernetes (if using K8s)
+        if: false  # Enable if using Kubernetes
+        run: |
+          echo "Deploying to Kubernetes cluster..."
+          # kubectl apply -f k8s/
+          # kubectl rollout status deployment/identity-provider
+          # kubectl rollout status deployment/order-gateway
+          # Add more deployments as needed
+
+      - name: Deploy via Docker Compose (SSH)
+        if: true  # Enable for simple SSH deployment
+        run: |
+          echo "Deploying via SSH..."
+          # Install SSH key
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          
+          # Add host to known_hosts
+          ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+          
+          # Deploy commands
+          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
+            cd /opt/cafeteria-system
+            git pull origin main
+            docker-compose pull
+            docker-compose up -d
+            docker-compose ps
+          EOF
+
+      - name: Health check
+        id: deploy
+        run: |
+          echo "Waiting for services to be healthy..."
+          sleep 30
+          
+          # Check service health
+          curl -f ${{ secrets.DEPLOY_URL }}/health || exit 1
+          
+          echo "url=${{ secrets.DEPLOY_URL }}" >> $GITHUB_OUTPUT
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "Deployment failed, rolling back..."
+          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
+            cd /opt/cafeteria-system
+            docker-compose down
+            git checkout HEAD~1
+            docker-compose up -d
+          EOF
+
+  # Job 6: Notify on completion
+  notify:
+    name: Notify
+    runs-on: ubuntu-latest
+    needs: [test, integration-test, build, deploy]
+    if: always()
+    
+    steps:
+      - name: Send Slack notification
+        if: false  # Enable if using Slack
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: |
+            CI/CD Pipeline ${{ job.status }}
+            Branch: ${{ github.ref }}
+            Commit: ${{ github.sha }}
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+
+      - name: Create GitHub deployment status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const status = '${{ needs.deploy.result }}' === 'success' ? 'success' : 'failure';
+            github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: context.payload.deployment?.id || 0,
+              state: status,
+              description: `Deployment ${status}`,
+            });

@@ -1,0 +1,325 @@
+# Default values for cafeteria-system
+# This is a YAML-formatted file.
+
+# Global settings
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+  storageClass: "fast-ssd"
+
+# Image settings
+image:
+  registry: docker.io
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+# Namespace
+namespace: cafeteria-system
+
+# Identity Provider
+identityProvider:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: cafeteria/identity-provider
+    tag: "1.0.0"
+  service:
+    type: ClusterIP
+    port: 3001
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+# Order Gateway
+orderGateway:
+  enabled: true
+  replicaCount: 3
+  image:
+    repository: cafeteria/order-gateway
+    tag: "1.0.0"
+  service:
+    type: ClusterIP
+    port: 3002
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "500m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 75
+
+# Stock Service
+stockService:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: cafeteria/stock-service
+    tag: "1.0.0"
+  service:
+    type: ClusterIP
+    port: 3003
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+
+# Kitchen Queue
+kitchenQueue:
+  enabled: true
+  replicaCount: 3
+  image:
+    repository: cafeteria/kitchen-queue
+    tag: "1.0.0"
+  service:
+    type: ClusterIP
+    port: 3004
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 15
+    targetCPUUtilizationPercentage: 70
+
+# Notification Hub
+notificationHub:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: cafeteria/notification-hub
+    tag: "1.0.0"
+  service:
+    type: LoadBalancer
+    port: 3005
+    sessionAffinity: ClientIP
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "500m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+
+# Client Application
+client:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: cafeteria/client
+    tag: "1.0.0"
+  service:
+    type: ClusterIP
+    port: 3000
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+
+# Admin Dashboard
+adminDashboard:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: cafeteria/admin-dashboard
+    tag: "1.0.0"
+  service:
+    type: ClusterIP
+    port: 3100
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+# PostgreSQL (using Bitnami chart)
+postgresql:
+  enabled: true
+  auth:
+    username: cafeteria_user
+    password: changeme
+    database: cafeteria_db
+  primary:
+    persistence:
+      enabled: true
+      size: 20Gi
+      storageClass: "fast-ssd"
+    resources:
+      requests:
+        memory: "1Gi"
+        cpu: "500m"
+      limits:
+        memory: "2Gi"
+        cpu: "1000m"
+
+# Redis (using Bitnami chart)
+redis:
+  enabled: true
+  auth:
+    enabled: false
+  master:
+    persistence:
+      enabled: true
+      size: 10Gi
+      storageClass: "fast-ssd"
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "250m"
+      limits:
+        memory: "2Gi"
+        cpu: "500m"
+
+# RabbitMQ (using Bitnami chart)
+rabbitmq:
+  enabled: true
+  auth:
+    username: admin
+    password: changeme
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: "fast-ssd"
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+
+# Prometheus (using community chart)
+prometheus:
+  enabled: true
+  server:
+    persistentVolume:
+      enabled: true
+      size: 30Gi
+      storageClass: "fast-ssd"
+    retention: "30d"
+    resources:
+      requests:
+        memory: "1Gi"
+        cpu: "500m"
+      limits:
+        memory: "2Gi"
+        cpu: "1000m"
+
+# Grafana (using community chart)
+grafana:
+  enabled: true
+  adminPassword: changeme
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: "fast-ssd"
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+# Ingress
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+  hosts:
+    - host: api.cafeteria.example.com
+      paths:
+        - path: /api/auth
+          service: identity-provider
+          port: 3001
+        - path: /api/orders
+          service: order-gateway
+          port: 3002
+        - path: /api/stock
+          service: stock-service
+          port: 3003
+    - host: app.cafeteria.example.com
+      paths:
+        - path: /
+          service: client
+          port: 3000
+    - host: admin.cafeteria.example.com
+      paths:
+        - path: /
+          service: admin-dashboard
+          port: 3100
+  tls:
+    - secretName: cafeteria-tls
+      hosts:
+        - api.cafeteria.example.com
+        - app.cafeteria.example.com
+        - admin.cafeteria.example.com
+
+# Service Mesh (Istio)
+serviceMesh:
+  enabled: false
+  istio:
+    enabled: false
+
+# Network Policies
+networkPolicy:
+  enabled: true
+
+# Pod Disruption Budgets
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Security Context
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+# Environment
+environment: production
