@@ -858,7 +858,7 @@ copies or substantial portions of the Software.
 
 <div align="center">
 
-### **Md Mushfiqur Rahman Tahanan**
+### **Musfikur Rahaman Tahanan**
 
 **Computer Science & Engineering**  
 **Islamic University of Technology (IUT)**  
@@ -957,7 +957,7 @@ This project was inspired by real-world challenges faced during university cafet
 
 ### 🌟 If you find this project helpful, please consider giving it a star! 🌟
 
-**Made with ❤️ by [Md Mushfiqur Rahman Tahanan](https://github.com/tahanan123-tec)**
+**Made with ❤️ by [Musfikur Rahaman Tahanan](https://github.com/tahanan123-tec)**
 
 **Islamic University of Technology (IUT) • Computer Science & Engineering**
 
