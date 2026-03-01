@@ -77,8 +77,9 @@ export const checkServiceHealth = async (service: ServiceConfig): Promise<Health
   const startTime = Date.now();
   
   try {
+    // Use nginx proxy for health checks
     const response = await axios.get(
-      `${SERVICES_BASE_URL}:${service.port}${service.healthEndpoint}`,
+      `${SERVICES_BASE_URL}/service-health/${service.name}`,
       { timeout: 5000 }
     );
     
@@ -86,7 +87,7 @@ export const checkServiceHealth = async (service: ServiceConfig): Promise<Health
     
     return {
       service: service.name,
-      status: response.status === 200 ? 'healthy' : 'unhealthy',
+      status: response.status === 200 && response.data.status === 'healthy' ? 'healthy' : 'unhealthy',
       responseTime,
       timestamp: new Date().toISOString(),
       details: response.data,

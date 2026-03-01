@@ -231,6 +231,8 @@ services:
     environment:
       - NODE_ENV=development
       - NEXT_PUBLIC_SERVICES_BASE_URL=http://localhost
+      - NEXT_PUBLIC_PROMETHEUS_URL=http://localhost/prometheus
+      - NEXT_PUBLIC_INTERNAL_API_KEY=internal-secret-key
     volumes:
       - ./admin-dashboard/src:/app/src
       - ./admin-dashboard/public:/app/public

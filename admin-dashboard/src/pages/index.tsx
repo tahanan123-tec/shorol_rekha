@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
 import {
   Activity,
   Clock,
@@ -9,12 +10,14 @@ import {
   Zap,
   Server,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast, { Toaster } from 'react-hot-toast';
 import { ServiceHealthCard } from '@/components/ServiceHealthCard';
 import { MetricCard } from '@/components/MetricCard';
 import { MetricsChart } from '@/components/MetricsChart';
 import { ChaosPanel } from '@/components/ChaosPanel';
+import { Navigation } from '@/components/Navigation';
 import { useDashboardStore } from '@/lib/store';
+import { useAdminAuth } from '@/lib/auth';
 import {
   checkAllServicesHealth,
   getAverageLatency,
@@ -42,6 +45,8 @@ interface TimeSeriesData {
 }
 
 export default function AdminDashboard() {
+  useAdminAuth(); // Protect this route
+  
   const {
     healthStatuses,
     setHealthStatuses,
@@ -146,16 +151,22 @@ export default function AdminDashboard() {
     }
   };
 
-  // Auto-refresh effect
+  // Mount effect
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  // Auto-refresh effect
+  useEffect(() => {
+    if (!mounted) return;
+    
     refreshData();
 
     if (autoRefresh) {
       const interval = setInterval(refreshData, refreshInterval);
       return () => clearInterval(interval);
     }
-  }, [autoRefresh, refreshInterval]);
+  }, [mounted, autoRefresh, refreshInterval]);
 
   // Calculate overall health
   const healthyCount = healthStatuses.filter((h) => h.status === 'healthy').length;
@@ -182,8 +193,21 @@ export default function AdminDashboard() {
         Object.values(serviceMetrics).length
       : 0;
 
+  // Don't render until mounted to avoid hydration mismatch
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-primary-600" />
+          <p className="text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
+      <Navigation />
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 py-4">
@@ -243,8 +267,8 @@ export default function AdminDashboard() {
           </div>
 
           {/* Last Update */}
-          <div className="mt-2 text-xs text-gray-500" suppressHydrationWarning>
-            {mounted && lastUpdate ? (
+          <div className="mt-2 text-xs text-gray-500">
+            {lastUpdate ? (
               <>
                 Last updated: {lastUpdate.toLocaleTimeString()} • Next refresh in{' '}
                 {autoRefresh ? `${refreshInterval / 1000}s` : 'manual'}
@@ -384,6 +408,7 @@ export default function AdminDashboard() {
           </div>
         )}
       </main>
+      <Toaster position="top-right" />
     </div>
   );
 }

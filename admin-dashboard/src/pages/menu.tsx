@@ -13,7 +13,9 @@ import {
   Save,
   X,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast, { Toaster } from 'react-hot-toast';
+import { Navigation } from '@/components/Navigation';
+import { useAdminAuth } from '@/lib/auth';
 
 interface MenuItem {
   id: number;
@@ -31,6 +33,8 @@ interface MenuItem {
 const CATEGORIES = ['Main Course', 'Fast Food', 'Snacks', 'Beverages', 'Desserts'];
 
 export default function MenuManagement() {
+  useAdminAuth(); // Protect this route
+  
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [filteredItems, setFilteredItems] = useState<MenuItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -52,7 +56,8 @@ export default function MenuManagement() {
   const fetchMenuItems = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:3003/api/menu');
+      // Use nginx proxy endpoint
+      const response = await fetch('/stock');
       const data = await response.json();
       
       if (data.success) {
@@ -103,9 +108,10 @@ export default function MenuManagement() {
     };
 
     try {
+      // Use nginx proxy endpoint
       const url = editingItem
-        ? `http://localhost:3003/api/menu/${editingItem.id}`
-        : 'http://localhost:3003/api/menu';
+        ? `/stock/${editingItem.id}`
+        : '/stock';
       
       const method = editingItem ? 'PUT' : 'POST';
 
@@ -113,6 +119,7 @@ export default function MenuManagement() {
         method,
         headers: {
           'Content-Type': 'application/json',
+          'x-internal-api-key': process.env.NEXT_PUBLIC_INTERNAL_API_KEY || 'internal-secret-key',
         },
         body: JSON.stringify(itemData),
       });
@@ -140,8 +147,11 @@ export default function MenuManagement() {
     }
 
     try {
-      const response = await fetch(`http://localhost:3003/api/menu/${id}`, {
+      const response = await fetch(`/stock/${id}`, {
         method: 'DELETE',
+        headers: {
+          'x-internal-api-key': process.env.NEXT_PUBLIC_INTERNAL_API_KEY || 'internal-secret-key',
+        },
       });
 
       const data = await response.json();
@@ -161,10 +171,11 @@ export default function MenuManagement() {
   // Handle toggle availability
   const toggleAvailability = async (item: MenuItem) => {
     try {
-      const response = await fetch(`http://localhost:3003/api/menu/${item.id}`, {
+      const response = await fetch(`/stock/${item.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'x-internal-api-key': process.env.NEXT_PUBLIC_INTERNAL_API_KEY || 'internal-secret-key',
         },
         body: JSON.stringify({
           ...item,
@@ -216,11 +227,12 @@ export default function MenuManagement() {
   // Calculate statistics
   const totalItems = menuItems.length;
   const availableItems = menuItems.filter((item) => item.is_available).length;
-  const totalValue = menuItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const totalValue = menuItems.reduce((sum, item) => sum + (parseFloat(item.price) * item.quantity), 0);
   const lowStockItems = menuItems.filter((item) => item.quantity < 20).length;
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Navigation />
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 py-4">
@@ -376,7 +388,7 @@ export default function MenuManagement() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      ৳{item.price.toFixed(2)}
+                      ৳{parseFloat(item.price).toFixed(2)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span

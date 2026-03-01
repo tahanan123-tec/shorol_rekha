@@ -97,8 +97,35 @@ const getUserOrders = async (req, res, next) => {
   }
 };
 
+/**
+ * GET /orders/all
+ * Get all orders (Admin only - requires internal API key)
+ */
+const getAllOrders = async (req, res, next) => {
+  try {
+    const limit = parseInt(req.query.limit || '100', 10);
+    const offset = parseInt(req.query.offset || '0', 10);
+    const status = req.query.status;
+
+    const orders = await orderService.getAllOrders(limit, offset, status);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        orders,
+        limit,
+        offset,
+        count: orders.length,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createOrder,
   getOrderStatus,
   getUserOrders,
+  getAllOrders,
 };
