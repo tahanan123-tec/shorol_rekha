@@ -10,6 +10,7 @@ const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 
 // Routes
 const stockRoutes = require('./routes/stock.routes');
+const menuRoutes = require('./routes/menu.routes');
 const healthRoutes = require('./routes/health.routes');
 
 const app = express();
@@ -61,7 +62,8 @@ app.use((req, res, next) => {
 });
 
 // Routes
-app.use('/', stockRoutes);
+app.use('/api', stockRoutes);
+app.use('/api', menuRoutes);
 app.use('/', healthRoutes);
 
 // 404 handler
