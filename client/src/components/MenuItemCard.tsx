@@ -37,7 +37,7 @@ export function MenuItemCard({ item, onViewDetails }: MenuItemCardProps) {
     <div className="glass rounded-2xl overflow-hidden card-hover group">
       {/* Image */}
       <div className="relative h-48 bg-gradient-to-br from-primary-100 to-purple-100 overflow-hidden">
-        {item.image ? (
+        {item.image && (item.image.startsWith('http') || item.image.startsWith('/')) ? (
           <img
             src={item.image}
             alt={item.name}
@@ -45,7 +45,7 @@ export function MenuItemCard({ item, onViewDetails }: MenuItemCardProps) {
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-6xl">
-            🍽️
+            {item.image || '🍽️'}
           </div>
         )}
 

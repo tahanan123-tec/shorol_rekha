@@ -32,10 +32,19 @@ export default function OrdersPage() {
     try {
       setLoading(true);
       const response = await orderAPI.getOrders();
-      if (response.success) {
+      console.log('Orders API Response:', response);
+      if (response.success && Array.isArray(response.data)) {
         setOrders(response.data);
         // Add to history store
         response.data.forEach((order: Order) => addToHistory(order));
+      } else if (response.success && response.data) {
+        // Handle case where data might be nested
+        const ordersArray = Array.isArray(response.data) ? response.data : [];
+        setOrders(ordersArray);
+        ordersArray.forEach((order: Order) => addToHistory(order));
+      } else {
+        // No orders yet
+        setOrders([]);
       }
     } catch (error) {
       console.error('Failed to fetch orders:', error);

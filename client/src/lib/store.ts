@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import type { User, Order, CartItem, MenuItem, Notification } from '@/types';
 
 // Auth Store
@@ -25,6 +25,11 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'auth-storage',
+      storage: createJSONStorage(() => typeof window !== 'undefined' ? localStorage : {
+        getItem: () => null,
+        setItem: () => {},
+        removeItem: () => {},
+      } as any),
     }
   )
 );
@@ -74,6 +79,11 @@ export const useCartStore = create<CartState>()(
     }),
     {
       name: 'cart-storage',
+      storage: createJSONStorage(() => typeof window !== 'undefined' ? localStorage : {
+        getItem: () => null,
+        setItem: () => {},
+        removeItem: () => {},
+      } as any),
     }
   )
 );
@@ -119,6 +129,11 @@ export const useOrderStore = create<OrderState>()(
     }),
     {
       name: 'order-storage',
+      storage: createJSONStorage(() => typeof window !== 'undefined' ? localStorage : {
+        getItem: () => null,
+        setItem: () => {},
+        removeItem: () => {},
+      } as any),
     }
   )
 );
@@ -166,6 +181,11 @@ export const useMenuStore = create<MenuState>()(
     {
       name: 'menu-storage',
       partialize: (state) => ({ favorites: state.favorites }), // Only persist favorites
+      storage: createJSONStorage(() => typeof window !== 'undefined' ? localStorage : {
+        getItem: () => null,
+        setItem: () => {},
+        removeItem: () => {},
+      } as any),
     }
   )
 );
@@ -224,6 +244,11 @@ export const useNotificationStore = create<NotificationState>()(
     }),
     {
       name: 'notification-storage',
+      storage: createJSONStorage(() => typeof window !== 'undefined' ? localStorage : {
+        getItem: () => null,
+        setItem: () => {},
+        removeItem: () => {},
+      } as any),
     }
   )
 );
@@ -259,6 +284,11 @@ export const useUIStore = create<UIState>()(
     {
       name: 'ui-storage',
       partialize: (state) => ({ theme: state.theme }),
+      storage: createJSONStorage(() => typeof window !== 'undefined' ? localStorage : {
+        getItem: () => null,
+        setItem: () => {},
+        removeItem: () => {},
+      } as any),
     }
   )
 );

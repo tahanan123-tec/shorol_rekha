@@ -39,7 +39,9 @@ export default function MenuPage() {
     try {
       setLoading(true);
       const response = await stockAPI.getStock();
+      console.log('Menu API Response:', response);
       if (response.success && response.data?.items) {
+        console.log('Menu Items:', response.data.items);
         setItems(response.data.items);
       }
     } catch (error) {
@@ -52,15 +54,20 @@ export default function MenuPage() {
 
   // Filter and sort items
   const filteredItems = useMemo(() => {
-    let filtered = items;
+    // Don't process if items is not an array or is empty
+    if (!Array.isArray(items) || items.length === 0) {
+      return [];
+    }
+
+    let filtered = items.filter(item => item && item.name); // Filter out invalid items
 
     // Search filter
     if (searchQuery) {
       filtered = filtered.filter(
         (item) =>
-          item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.category.toLowerCase().includes(searchQuery.toLowerCase())
+          (item.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (item.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (item.category || '').toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
@@ -73,11 +80,11 @@ export default function MenuPage() {
     filtered = [...filtered].sort((a, b) => {
       switch (sortBy) {
         case 'name':
-          return a.name.localeCompare(b.name);
+          return (a.name || '').localeCompare(b.name || '');
         case 'price-low':
-          return a.price - b.price;
+          return (a.price || 0) - (b.price || 0);
         case 'price-high':
-          return b.price - a.price;
+          return (b.price || 0) - (a.price || 0);
         case 'rating':
           return (b.rating || 0) - (a.rating || 0);
         default:
@@ -282,7 +289,7 @@ export default function MenuPage() {
             <div className="space-y-4">
               {/* Image */}
               <div className="h-64 bg-gradient-to-br from-primary-100 to-purple-100 rounded-xl overflow-hidden">
-                {selectedItem.image ? (
+                {selectedItem.image && (selectedItem.image.startsWith('http') || selectedItem.image.startsWith('/')) ? (
                   <img
                     src={selectedItem.image}
                     alt={selectedItem.name}
@@ -290,7 +297,7 @@ export default function MenuPage() {
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-8xl">
-                    🍽️
+                    {selectedItem.image || '🍽️'}
                   </div>
                 )}
               </div>
