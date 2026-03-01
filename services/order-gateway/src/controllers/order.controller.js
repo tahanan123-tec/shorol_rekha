@@ -123,9 +123,44 @@ const getAllOrders = async (req, res, next) => {
   }
 };
 
+/**
+ * PUT /orders/:id/status
+ * Update order status (Admin only - requires internal API key)
+ */
+const updateOrderStatus = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!status) {
+      return res.status(400).json({
+        success: false,
+        error: 'Status is required',
+      });
+    }
+
+    const order = await orderService.updateOrderStatus(id, status);
+
+    res.status(200).json({
+      success: true,
+      message: 'Order status updated successfully',
+      data: order,
+    });
+  } catch (error) {
+    if (error.message === 'Order not found') {
+      return res.status(404).json({
+        success: false,
+        error: error.message,
+      });
+    }
+    next(error);
+  }
+};
+
 module.exports = {
   createOrder,
   getOrderStatus,
   getUserOrders,
   getAllOrders,
+  updateOrderStatus,
 };

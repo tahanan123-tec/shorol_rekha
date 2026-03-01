@@ -33,17 +33,22 @@ export default function OrdersPage() {
       setLoading(true);
       const response = await orderAPI.getOrders();
       console.log('Orders API Response:', response);
-      if (response.success && Array.isArray(response.data)) {
-        setOrders(response.data);
-        // Add to history store
-        response.data.forEach((order: Order) => addToHistory(order));
-      } else if (response.success && response.data) {
-        // Handle case where data might be nested
-        const ordersArray = Array.isArray(response.data) ? response.data : [];
+      
+      if (response.success && response.data?.orders) {
+        // Backend returns { success, data: { orders: [...], count, limit, offset } }
+        const ordersArray = response.data.orders;
+        console.log('Orders array:', ordersArray);
+        console.log('Orders count:', ordersArray.length);
         setOrders(ordersArray);
         ordersArray.forEach((order: Order) => addToHistory(order));
+      } else if (response.success && Array.isArray(response.data)) {
+        // Fallback: if data is directly an array
+        console.log('Orders as direct array:', response.data);
+        setOrders(response.data);
+        response.data.forEach((order: Order) => addToHistory(order));
       } else {
         // No orders yet
+        console.log('No orders found in response');
         setOrders([]);
       }
     } catch (error) {
@@ -144,13 +149,13 @@ export default function OrdersPage() {
                 <div className="mb-4">
                   <p className="text-sm text-gray-600 mb-2">Items:</p>
                   <div className="space-y-1">
-                    {order.items.map((item, index) => (
+                    {order.items.map((item: any, index) => (
                       <div key={index} className="flex items-center justify-between text-sm">
                         <span className="text-gray-700">
-                          {item.quantity}x {item.name}
+                          {item.quantity}x {item.name || item.id || 'Item'}
                         </span>
                         <span className="font-medium">
-                          {formatCurrency(item.price * item.quantity)}
+                          {item.price ? formatCurrency(item.price * item.quantity) : '-'}
                         </span>
                       </div>
                     ))}

@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { ShoppingCart, CreditCard, MapPin, Clock, ArrowLeft } from 'lucide-react';
 import { Layout } from '@/components/Layout';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { useCartStore, useOrderStore } from '@/lib/store';
+import { useCartStore, useOrderStore, useAuthStore } from '@/lib/store';
 import { orderAPI } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
 import { subscribeToOrder } from '@/lib/websocket';
@@ -15,18 +15,46 @@ export default function CheckoutPage() {
   const router = useRouter();
   const { items, getTotalPrice, clearCart } = useCartStore();
   const { setCurrentOrder } = useOrderStore();
+  const { isAuthenticated } = useAuthStore();
   const [isPlacing, setIsPlacing] = useState(false);
   const [deliveryTime, setDeliveryTime] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'bkash' | 'bank'>('cash');
   const [bkashNumber, setBkashNumber] = useState('');
   const [transactionId, setTransactionId] = useState('');
   const [bankAccount, setBankAccount] = useState('');
+  const [mounted, setMounted] = useState(false);
 
   const subtotal = getTotalPrice();
   const tax = subtotal * 0.1;
   const total = subtotal + tax;
 
+  // Wait for hydration before checking auth
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Check authentication after mount
+  useEffect(() => {
+    if (mounted && !isAuthenticated()) {
+      toast.error('Please login to place an order');
+      router.push('/login?redirect=/checkout');
+    }
+  }, [mounted, isAuthenticated, router]);
+
   const handlePlaceOrder = async () => {
+    // Double-check authentication before placing order
+    if (!isAuthenticated()) {
+      toast.error('Please login to place an order');
+      router.push('/login?redirect=/checkout');
+      return;
+    }
+    
+    // Debug: Check if token exists
+    const token = useAuthStore.getState().accessToken;
+    console.log('=== ORDER DEBUG ===');
+    console.log('Token exists:', !!token);
+    console.log('Token preview:', token?.substring(0, 30) + '...');
+    
     if (items.length === 0) {
       toast.error('Your cart is empty');
       return;
@@ -58,9 +86,22 @@ export default function CheckoutPage() {
         quantity: item.quantity,
       }));
 
+      // Format delivery time to HH:MM if provided
+      let formattedDeliveryTime: string | undefined = undefined;
+      if (deliveryTime) {
+        // Extract time from datetime-local format (YYYY-MM-DDTHH:MM)
+        const timePart = deliveryTime.split('T')[1];
+        if (timePart) {
+          formattedDeliveryTime = timePart;
+        }
+      }
+
+      console.log('Delivery time raw:', deliveryTime);
+      console.log('Delivery time formatted:', formattedDeliveryTime);
+
       const response = await orderAPI.createOrder(
         orderItems,
-        deliveryTime || undefined,
+        formattedDeliveryTime,
         paymentMethod,
         transactionId || undefined
       );
@@ -74,6 +115,13 @@ export default function CheckoutPage() {
         router.push('/');
       }
     } catch (error: any) {
+      // Handle 401 specifically
+      if (error.response?.status === 401) {
+        toast.error('Your session has expired. Please login again.');
+        router.push('/login?redirect=/checkout');
+        return;
+      }
+      
       const errorMessage = error.response?.data?.error || 'Failed to place order';
       toast.error(errorMessage);
     } finally {

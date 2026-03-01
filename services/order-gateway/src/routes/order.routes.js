@@ -7,16 +7,13 @@ const orderRateLimiter = require('../middleware/rateLimiter');
 
 const router = express.Router();
 
-// All routes require authentication
-router.use(authenticate);
-
 // Create order (with idempotency and rate limiting: 10 per minute per student, 50 per minute per IP)
-router.post('/order', orderRateLimiter.orderRateLimiter(), idempotency, validate('createOrder'), orderController.createOrder);
+router.post('/order', authenticate, orderRateLimiter.orderRateLimiter(), idempotency, validate('createOrder'), orderController.createOrder);
 
 // Get order status
-router.get('/order/status/:id', orderController.getOrderStatus);
+router.get('/order/status/:id', authenticate, orderController.getOrderStatus);
 
 // Get user orders
-router.get('/orders', orderController.getUserOrders);
+router.get('/orders', authenticate, orderController.getUserOrders);
 
 module.exports = router;

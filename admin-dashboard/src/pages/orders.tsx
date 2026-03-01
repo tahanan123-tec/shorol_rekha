@@ -63,39 +63,24 @@ export default function OrdersManagement() {
   const fetchOrders = async () => {
     setIsLoading(true);
     try {
-      // Admin should fetch all orders without authentication
-      // We'll need to create an admin endpoint or use internal API key
-      // For now, let's try without auth header
-      const response = await fetch('/api/orders/all', {
+      const response = await fetch('/api/admin/orders/all', {
         headers: {
           'x-internal-api-key': process.env.NEXT_PUBLIC_INTERNAL_API_KEY || 'internal-secret-key',
         },
       });
       
-      // If that endpoint doesn't exist, fall back to regular endpoint
-      if (response.status === 404) {
-        const fallbackResponse = await fetch('/api/orders');
-        const data = await fallbackResponse.json();
-        
-        if (data.success) {
-          setOrders(data.data?.orders || []);
-          setFilteredOrders(data.data?.orders || []);
-        } else {
-          // No orders or error - show empty state
-          setOrders([]);
-          setFilteredOrders([]);
-        }
+      const data = await response.json();
+      
+      if (data.success) {
+        setOrders(data.data?.orders || []);
+        setFilteredOrders(data.data?.orders || []);
       } else {
-        const data = await response.json();
-        
-        if (data.success) {
-          setOrders(data.data?.orders || []);
-          setFilteredOrders(data.data?.orders || []);
-        }
+        console.error('Failed to fetch orders:', data.error);
+        setOrders([]);
+        setFilteredOrders([]);
       }
     } catch (error) {
       console.error('Error fetching orders:', error);
-      // Don't show error toast, just show empty state
       setOrders([]);
       setFilteredOrders([]);
     } finally {
@@ -131,7 +116,7 @@ export default function OrdersManagement() {
   // Update order status
   const updateOrderStatus = async (orderId: number, newStatus: string) => {
     try {
-      const response = await fetch(`/api/orders/${orderId}/status`, {
+      const response = await fetch(`/api/admin/orders/${orderId}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -359,10 +344,11 @@ export default function OrdersManagement() {
             </table>
           </div>
 
-          {filteredOrders.length === 0 && (
+          {filteredOrders.length === 0 && !isLoading && (
             <div className="text-center py-12">
               <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">No orders found</p>
+              <p className="text-gray-500 mb-2">No orders found</p>
+              <p className="text-sm text-gray-400">Orders will appear here once customers start placing them</p>
             </div>
           )}
         </div>

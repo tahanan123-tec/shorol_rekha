@@ -25,7 +25,7 @@ class OrderRateLimiter {
   // Order rate limiter: 10 orders per minute per student
   orderRateLimiter() {
     return async (req, res, next) => {
-      const studentId = req.user?.studentId;
+      const studentId = req.user?.student_id;
       const ip = this.getClientIP(req);
 
       if (!studentId) {

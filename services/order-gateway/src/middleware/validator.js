@@ -18,12 +18,14 @@ const schemas = {
         'array.max': 'Maximum 50 items allowed per order',
       }),
     delivery_time: Joi.string()
-      .pattern(/^([01]\d|2[0-3]):([0-5]\d)$/)
+      .pattern(/^(\d{4}-\d{2}-\d{2}T)?([01]\d|2[0-3]):([0-5]\d)$/)
       .optional()
       .messages({
-        'string.pattern.base': 'Delivery time must be in HH:MM format',
+        'string.pattern.base': 'Delivery time must be in HH:MM or YYYY-MM-DDTHH:MM format',
       }),
     notes: Joi.string().max(500).optional(),
+    payment_method: Joi.string().valid('cash', 'bkash', 'bank').optional(),
+    transaction_id: Joi.string().optional(),
   }),
 };
 

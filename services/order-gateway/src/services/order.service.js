@@ -50,11 +50,24 @@ const createOrder = async (user, orderData, idempotencyKey) => {
       };
     }
 
-    // Step 3: Calculate total amount (mock - should come from menu service)
-    const totalAmount = orderData.items.reduce((sum, item) => {
-      const price = 10.00; // Mock price
-      return sum + (price * item.quantity);
-    }, 0);
+    // Step 3: Calculate total amount from actual menu prices
+    let totalAmount = 0;
+    try {
+      // Fetch prices from stock service for all items
+      const itemIds = orderData.items.map(item => item.id);
+      const priceResponse = await stockService.getItemPrices(itemIds);
+      
+      totalAmount = orderData.items.reduce((sum, item) => {
+        const itemPrice = priceResponse[item.id] || 0;
+        return sum + (itemPrice * item.quantity);
+      }, 0);
+      
+      logger.info('Order total calculated', { orderId, totalAmount, items: orderData.items.length });
+    } catch (error) {
+      logger.error('Failed to fetch item prices, using fallback', { orderId, error: error.message });
+      // Fallback: use a default price if price fetch fails
+      totalAmount = orderData.items.reduce((sum, item) => sum + (10.00 * item.quantity), 0);
+    }
 
     // Step 4: Save order to database
     await client.query('BEGIN');
@@ -222,8 +235,85 @@ const getUserOrders = async (userId, limit = 20, offset = 0) => {
   }
 };
 
+/**
+ * Get all orders (Admin)
+ */
+const getAllOrders = async (limit = 100, offset = 0, status = null) => {
+  try {
+    let query = `SELECT o.id, o.order_id, o.user_id, o.status, o.items, o.total_amount, o.delivery_time, o.created_at, o.updated_at
+       FROM orders o
+       WHERE 1=1`;
+    
+    const params = [];
+    
+    if (status) {
+      params.push(status);
+      query += ` AND o.status = $${params.length}`;
+    }
+    
+    params.push(limit, offset);
+    query += ` ORDER BY o.created_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}`;
+    
+    const result = await pool.query(query, params);
+
+    return result.rows.map(order => ({
+      id: order.id,
+      order_id: order.order_id,
+      user_id: order.user_id,
+      status: order.status,
+      items: order.items,
+      total_amount: parseFloat(order.total_amount),
+      delivery_time: order.delivery_time,
+      created_at: order.created_at,
+      updated_at: order.updated_at,
+    }));
+  } catch (error) {
+    logger.error('Failed to get all orders', { error: error.message });
+    throw error;
+  }
+};
+
+/**
+ * Update order status (Admin)
+ */
+const updateOrderStatus = async (orderId, newStatus) => {
+  try {
+    const result = await pool.query(
+      `UPDATE orders 
+       SET status = $1, updated_at = CURRENT_TIMESTAMP 
+       WHERE id = $2 
+       RETURNING id, order_id, user_id, status, items, total_amount, delivery_time, created_at, updated_at`,
+      [newStatus, orderId]
+    );
+
+    if (result.rows.length === 0) {
+      throw new Error('Order not found');
+    }
+
+    const order = result.rows[0];
+    logger.info('Order status updated', { orderId, newStatus });
+
+    return {
+      id: order.id,
+      order_id: order.order_id,
+      user_id: order.user_id,
+      status: order.status,
+      items: order.items,
+      total_amount: parseFloat(order.total_amount),
+      delivery_time: order.delivery_time,
+      created_at: order.created_at,
+      updated_at: order.updated_at,
+    };
+  } catch (error) {
+    logger.error('Failed to update order status', { orderId, error: error.message });
+    throw error;
+  }
+};
+
 module.exports = {
   createOrder,
   getOrderStatus,
   getUserOrders,
+  getAllOrders,
+  updateOrderStatus,
 };

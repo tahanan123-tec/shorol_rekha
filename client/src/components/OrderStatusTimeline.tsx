@@ -16,7 +16,7 @@ const steps: TimelineStep[] = [
     description: 'Your order has been received',
   },
   {
-    status: 'STOCK_VERIFIED',
+    status: 'CONFIRMED',
     label: 'Stock Verified',
     icon: <Check className="w-5 h-5" />,
     description: 'Items are available',
@@ -32,6 +32,12 @@ const steps: TimelineStep[] = [
     label: 'Ready for Pickup',
     icon: <Check className="w-5 h-5" />,
     description: 'Your order is ready!',
+  },
+  {
+    status: 'COMPLETED',
+    label: 'Completed',
+    icon: <Check className="w-5 h-5" />,
+    description: 'Order delivered successfully',
   },
 ];
 
@@ -116,7 +122,7 @@ export const OrderStatusTimeline: React.FC<OrderStatusTimelineProps> = ({
       })}
 
       {/* Completion Time */}
-      {currentStatus === 'READY' && completedAt && (
+      {(currentStatus === 'READY' || currentStatus === 'COMPLETED') && completedAt && (
         <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
           <p className="text-sm font-medium text-green-800">
             🎉 Order completed at {new Date(completedAt).toLocaleTimeString()}

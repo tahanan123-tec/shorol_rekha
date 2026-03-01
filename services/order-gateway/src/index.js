@@ -12,6 +12,7 @@ const wafMiddleware = require('./middleware/waf.middleware');
 
 // Routes
 const orderRoutes = require('./routes/order.routes');
+const adminRoutes = require('./routes/admin.routes');
 const healthRoutes = require('./routes/health.routes');
 
 const app = express();
@@ -90,7 +91,10 @@ app.use((req, res, next) => {
   next();
 });
 
-// Routes
+// Routes - Admin routes must come BEFORE general API routes for proper matching
+logger.info('Registering admin routes at /api/admin');
+app.use('/api/admin', adminRoutes);
+logger.info('Registering order routes at /api');
 app.use('/api', orderRoutes);
 app.use('/', healthRoutes);
 

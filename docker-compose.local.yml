@@ -133,6 +133,7 @@ services:
       - RABBITMQ_URL=amqp://admin:admin@rabbitmq:5672
       - IDENTITY_SERVICE_URL=http://identity-provider:3001
       - STOCK_SERVICE_URL=http://stock-service:3003
+      - INTERNAL_API_KEY=internal-secret-key
     depends_on:
       postgres:
         condition: service_healthy

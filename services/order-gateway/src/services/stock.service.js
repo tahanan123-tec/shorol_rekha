@@ -13,7 +13,7 @@ const checkStockInternal = async (items) => {
   
   try {
     const response = await axios.post(
-      `${config.stockService.url}/internal/stock/check`,
+      `${config.stockService.url}/api/internal/stock/check`,
       { items },
       {
         timeout: config.stockService.timeout,
@@ -53,7 +53,7 @@ const reserveStockInternal = async (orderId, items) => {
   
   try {
     const response = await axios.post(
-      `${config.stockService.url}/internal/stock/reserve`,
+      `${config.stockService.url}/api/internal/stock/reserve`,
       { order_id: orderId, items },
       {
         timeout: config.stockService.timeout,
@@ -213,7 +213,71 @@ const reserveStock = async (orderId, items, retryCount = 0) => {
   }
 };
 
+/**
+ * Get item prices from Stock Service
+ */
+const getItemPricesInternal = async (itemIds) => {
+  const start = Date.now();
+  
+  try {
+    // Fetch menu items to get prices
+    const response = await axios.get(
+      `${config.stockService.url}/api/menu`,
+      {
+        timeout: config.stockService.timeout,
+        headers: {
+          'X-Internal-API-Key': process.env.INTERNAL_API_KEY || 'dev-key',
+        },
+      }
+    );
+
+    const duration = (Date.now() - start) / 1000;
+    externalServiceCallDuration.observe(
+      { service: 'stock-service', endpoint: '/menu', status: 'success' },
+      duration
+    );
+
+    // Extract prices for requested items
+    const priceMap = {};
+    if (response.data.success && response.data.data?.items) {
+      response.data.data.items.forEach(item => {
+        if (itemIds.includes(String(item.id))) {
+          priceMap[String(item.id)] = parseFloat(item.price);
+        }
+      });
+    }
+
+    return priceMap;
+  } catch (error) {
+    const duration = (Date.now() - start) / 1000;
+    externalServiceCallDuration.observe(
+      { service: 'stock-service', endpoint: '/menu', status: 'error' },
+      duration
+    );
+
+    logger.error('Failed to fetch item prices', {
+      error: error.message,
+      status: error.response?.status,
+    });
+    throw error;
+  }
+};
+
+/**
+ * Get item prices with circuit breaker
+ */
+const getItemPrices = async (itemIds) => {
+  try {
+    return await getItemPricesInternal(itemIds);
+  } catch (error) {
+    logger.error('Get item prices failed', { error: error.message });
+    // Return empty map on failure - caller will use fallback
+    return {};
+  }
+};
+
 module.exports = {
   checkStock,
   reserveStock,
+  getItemPrices,
 };

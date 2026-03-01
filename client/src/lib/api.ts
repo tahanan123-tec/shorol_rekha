@@ -17,6 +17,10 @@ api.interceptors.request.use(
     const token = useAuthStore.getState().accessToken;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('API Request:', config.method?.toUpperCase(), config.url);
+      console.log('Auth header set:', config.headers.Authorization?.substring(0, 30) + '...');
+    } else {
+      console.warn('No token found for request:', config.url);
     }
     return config;
   },
@@ -28,11 +32,12 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid
+      console.error('401 Unauthorized - Token invalid or expired');
+      console.error('Request URL:', error.config?.url);
+      console.error('Auth header:', error.config?.headers?.Authorization?.substring(0, 30) + '...');
+      
+      // Clear auth but DON'T auto-redirect - let pages handle it
       useAuthStore.getState().clearAuth();
-      if (typeof window !== 'undefined') {
-        window.location.href = '/login';
-      }
     }
     return Promise.reject(error);
   }
@@ -72,9 +77,22 @@ export const orderAPI = {
     payment_method?: 'bkash' | 'bank' | 'cash',
     transaction_id?: string
   ) => {
+    // Build request body, only include optional fields if they have values
+    const body: any = { items };
+    
+    if (delivery_time) {
+      body.delivery_time = delivery_time;
+    }
+    if (payment_method) {
+      body.payment_method = payment_method;
+    }
+    if (transaction_id) {
+      body.transaction_id = transaction_id;
+    }
+
     const response = await api.post(
       '/api/order',
-      { items, delivery_time, payment_method, transaction_id },
+      body,
       {
         headers: {
           'Idempotency-Key': `${Date.now()}-${Math.random()}`,
