@@ -52,7 +52,7 @@ export default function MenuManagement() {
   const fetchMenuItems = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:3003/api/stock');
+      const response = await fetch('http://localhost:3003/api/menu');
       const data = await response.json();
       
       if (data.success) {

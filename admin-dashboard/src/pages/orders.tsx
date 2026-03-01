@@ -59,7 +59,7 @@ export default function OrdersManagement() {
   const fetchOrders = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:3002/api/orders/all', {
+      const response = await fetch('http://localhost:3002/api/orders', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('admin_token')}`,
         },
