@@ -373,7 +373,15 @@ export default function MenuManagement() {
                   <tr key={item.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <span className="text-2xl mr-3">{item.image}</span>
+                        {item.image && (item.image.startsWith('http') || item.image.startsWith('/')) ? (
+                          <img 
+                            src={item.image} 
+                            alt={item.name}
+                            className="w-12 h-12 object-cover rounded-lg mr-3"
+                          />
+                        ) : (
+                          <span className="text-2xl mr-3">{item.image}</span>
+                        )}
                         <div>
                           <div className="text-sm font-medium text-gray-900">{item.name}</div>
                           {item.description && (
@@ -539,17 +547,33 @@ export default function MenuManagement() {
                     />
                   </div>
 
-                  <div>
+                  <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Emoji/Icon
+                      Image URL or Emoji
                     </label>
                     <input
                       type="text"
                       value={formData.image}
                       onChange={(e) => setFormData({ ...formData, image: e.target.value })}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="🍽️"
+                      placeholder="https://images.unsplash.com/... or 🍽️"
                     />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Enter image URL (e.g., from Unsplash) or emoji
+                    </p>
+                    {formData.image && formData.image.startsWith('http') && (
+                      <div className="mt-2">
+                        <img 
+                          src={formData.image} 
+                          alt="Preview" 
+                          className="w-32 h-24 object-cover rounded-lg border border-gray-200"
+                          onError={(e) => {
+                            e.currentTarget.src = '';
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    )}
                   </div>
 
                   <div>
