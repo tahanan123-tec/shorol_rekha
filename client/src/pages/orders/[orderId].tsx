@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
-import { ArrowLeft, Clock, Package, MapPin, CreditCard } from 'lucide-react';
+import { ArrowLeft, Clock, Package, MapPin, CreditCard, RefreshCw } from 'lucide-react';
 import { Layout } from '@/components/Layout';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -19,6 +19,7 @@ export default function OrderDetailPage() {
   const [loading, setLoading] = useState(true);
   const [order, setOrder] = useState<Order | null>(null);
   const [mounted, setMounted] = useState(false);
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -37,9 +38,13 @@ export default function OrderDetailPage() {
     }
   }, [orderId, mounted]);
 
-  const fetchOrderDetails = async (id: string) => {
+  const fetchOrderDetails = async (id: string, showLoading = true) => {
     try {
-      setLoading(true);
+      // Don't show loading spinner on manual refresh
+      if (showLoading) {
+        setLoading(true);
+      }
+      
       const response = await orderAPI.getOrderStatus(id);
       
       if (response.success && response.data) {
@@ -57,7 +62,16 @@ export default function OrderDetailPage() {
       }
       router.push('/orders');
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
+    }
+  };
+
+  const handleRefresh = async () => {
+    if (orderId && typeof orderId === 'string') {
+      await fetchOrderDetails(orderId, false);
+      toast.success('Order status updated');
     }
   };
 
@@ -86,14 +100,25 @@ export default function OrderDetailPage() {
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <Button
-            variant="secondary"
-            onClick={() => router.push('/orders')}
-            icon={<ArrowLeft className="w-5 h-5" />}
-            className="mb-4"
-          >
-            Back to Orders
-          </Button>
+          <div className="flex items-center justify-between">
+            <Button
+              variant="secondary"
+              onClick={() => router.push('/orders')}
+              icon={<ArrowLeft className="w-5 h-5" />}
+              className="mb-4"
+            >
+              Back to Orders
+            </Button>
+            
+            <Button
+              variant="primary"
+              onClick={handleRefresh}
+              icon={<RefreshCw className="w-5 h-5" />}
+              className="mb-4"
+            >
+              Refresh Status
+            </Button>
+          </div>
           
           <div className="flex items-center justify-between">
             <div>
@@ -107,6 +132,33 @@ export default function OrderDetailPage() {
             <Badge variant={getOrderStatusColor(order.status) as any} className="text-lg px-4 py-2">
               {getOrderStatusLabel(order.status)}
             </Badge>
+          </div>
+          
+          {/* Animated Progress Bar */}
+          <div className="mt-6">
+            <div className="relative h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div 
+                className={`absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-1000 ease-out ${
+                  order.status.toUpperCase() === 'PENDING' ? 'w-[25%]' :
+                  order.status.toUpperCase() === 'CONFIRMED' ? 'w-[50%]' :
+                  order.status.toUpperCase() === 'PROCESSING' ? 'w-[75%]' :
+                  order.status.toUpperCase() === 'READY' ? 'w-[90%]' :
+                  order.status.toUpperCase() === 'COMPLETED' ? 'w-full' : 'w-0'
+                }`}
+                style={{
+                  boxShadow: '0 0 10px rgba(59, 130, 246, 0.5)'
+                }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-30 animate-shimmer"></div>
+              </div>
+            </div>
+            <div className="flex justify-between mt-2 text-xs text-gray-500">
+              <span className={['PENDING', 'CONFIRMED', 'PROCESSING', 'READY', 'COMPLETED'].includes(order.status.toUpperCase()) ? 'text-blue-600 font-semibold' : ''}>Placed</span>
+              <span className={['CONFIRMED', 'PROCESSING', 'READY', 'COMPLETED'].includes(order.status.toUpperCase()) ? 'text-blue-600 font-semibold' : ''}>Confirmed</span>
+              <span className={['PROCESSING', 'READY', 'COMPLETED'].includes(order.status.toUpperCase()) ? 'text-blue-600 font-semibold' : ''}>Preparing</span>
+              <span className={['READY', 'COMPLETED'].includes(order.status.toUpperCase()) ? 'text-blue-600 font-semibold' : ''}>Ready</span>
+              <span className={order.status.toUpperCase() === 'COMPLETED' ? 'text-blue-600 font-semibold' : ''}>Completed</span>
+            </div>
           </div>
         </div>
 

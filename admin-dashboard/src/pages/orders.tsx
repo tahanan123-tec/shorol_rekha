@@ -32,6 +32,13 @@ interface Order {
 }
 
 const STATUS_COLORS = {
+  PENDING: 'bg-yellow-100 text-yellow-800',
+  CONFIRMED: 'bg-blue-100 text-blue-800',
+  PROCESSING: 'bg-purple-100 text-purple-800',
+  READY: 'bg-green-100 text-green-800',
+  COMPLETED: 'bg-gray-100 text-gray-800',
+  CANCELLED: 'bg-red-100 text-red-800',
+  // Legacy lowercase support
   pending: 'bg-yellow-100 text-yellow-800',
   confirmed: 'bg-blue-100 text-blue-800',
   preparing: 'bg-purple-100 text-purple-800',
@@ -41,6 +48,13 @@ const STATUS_COLORS = {
 };
 
 const STATUS_ICONS = {
+  PENDING: Clock,
+  CONFIRMED: CheckCircle,
+  PROCESSING: ChefHat,
+  READY: Package,
+  COMPLETED: CheckCircle,
+  CANCELLED: XCircle,
+  // Legacy lowercase support
   pending: Clock,
   confirmed: CheckCircle,
   preparing: ChefHat,
@@ -141,11 +155,11 @@ export default function OrdersManagement() {
 
   // Calculate statistics
   const totalOrders = orders.length;
-  const pendingOrders = orders.filter((o) => o.status === 'pending').length;
-  const preparingOrders = orders.filter((o) => o.status === 'preparing').length;
-  const completedOrders = orders.filter((o) => o.status === 'completed').length;
+  const pendingOrders = orders.filter((o) => o.status === 'PENDING' || o.status === 'pending').length;
+  const preparingOrders = orders.filter((o) => o.status === 'PROCESSING' || o.status === 'preparing').length;
+  const completedOrders = orders.filter((o) => o.status === 'COMPLETED' || o.status === 'completed').length;
   const totalRevenue = orders
-    .filter((o) => o.status === 'completed')
+    .filter((o) => o.status === 'COMPLETED' || o.status === 'completed')
     .reduce((sum, o) => sum + parseFloat(o.total_amount || 0), 0);
 
   return (
@@ -237,12 +251,12 @@ export default function OrdersManagement() {
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="all">All Status</option>
-                <option value="pending">Pending</option>
-                <option value="confirmed">Confirmed</option>
-                <option value="preparing">Preparing</option>
-                <option value="ready">Ready</option>
-                <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
+                <option value="PENDING">Pending</option>
+                <option value="CONFIRMED">Confirmed</option>
+                <option value="PROCESSING">Processing</option>
+                <option value="READY">Ready</option>
+                <option value="COMPLETED">Completed</option>
+                <option value="CANCELLED">Cancelled</option>
               </select>
             </div>
 
@@ -322,18 +336,18 @@ export default function OrdersManagement() {
                         >
                           <Eye className="w-5 h-5" />
                         </button>
-                        {order.status !== 'completed' && order.status !== 'cancelled' && (
+                        {order.status !== 'COMPLETED' && order.status !== 'completed' && order.status !== 'CANCELLED' && order.status !== 'cancelled' && (
                           <select
                             value={order.status}
                             onChange={(e) => updateOrderStatus(order.id, e.target.value)}
                             className="text-sm border border-gray-300 rounded px-2 py-1"
                           >
-                            <option value="pending">Pending</option>
-                            <option value="confirmed">Confirmed</option>
-                            <option value="preparing">Preparing</option>
-                            <option value="ready">Ready</option>
-                            <option value="completed">Completed</option>
-                            <option value="cancelled">Cancelled</option>
+                            <option value="PENDING">Pending</option>
+                            <option value="CONFIRMED">Confirmed</option>
+                            <option value="PROCESSING">Processing</option>
+                            <option value="READY">Ready</option>
+                            <option value="COMPLETED">Completed</option>
+                            <option value="CANCELLED">Cancelled</option>
                           </select>
                         )}
                       </td>

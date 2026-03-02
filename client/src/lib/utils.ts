@@ -106,6 +106,7 @@ export function capitalize(str: string): string {
 }
 
 export function getOrderStatusColor(status: string): string {
+  const normalizedStatus = status.toUpperCase();
   const colors: Record<string, string> = {
     PENDING: 'warning',
     CONFIRMED: 'info',
@@ -115,10 +116,11 @@ export function getOrderStatusColor(status: string): string {
     CANCELLED: 'error',
     FAILED: 'error',
   };
-  return colors[status] || 'info';
+  return colors[normalizedStatus] || 'info';
 }
 
 export function getOrderStatusLabel(status: string): string {
+  const normalizedStatus = status.toUpperCase();
   const labels: Record<string, string> = {
     PENDING: 'Pending',
     CONFIRMED: 'Confirmed',
@@ -128,5 +130,5 @@ export function getOrderStatusLabel(status: string): string {
     CANCELLED: 'Cancelled',
     FAILED: 'Failed',
   };
-  return labels[status] || status;
+  return labels[normalizedStatus] || capitalize(status);
 }

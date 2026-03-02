@@ -24,10 +24,9 @@ const updateOrderStatus = async (orderId, status, metadata = {}) => {
     await pool.query(
       `UPDATE orders 
        SET status = $1, 
-           updated_at = NOW(),
-           metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb
-       WHERE order_id = $3`,
-      [status, JSON.stringify(metadata), orderId]
+           updated_at = NOW()
+       WHERE order_id = $2`,
+      [status, orderId]
     );
     logger.debug('Order status updated', { orderId, status });
   } catch (error) {
