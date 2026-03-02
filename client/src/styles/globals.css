@@ -447,6 +447,24 @@ body {
   color: rgba(212, 175, 55, 0.7);
 }
 
+/* Menu item descriptions and secondary text */
+[data-theme='ramadan'] .text-gray-600,
+[data-theme='ramadan'] .text-gray-500 {
+  color: rgba(212, 175, 55, 0.8);
+}
+
+[data-theme='ramadan'] .text-gray-900 {
+  color: rgb(255, 255, 255);
+}
+
+[data-theme='ramadan'] .text-gray-700 {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+[data-theme='ramadan'] .text-gray-400 {
+  color: rgba(212, 175, 55, 0.6);
+}
+
 /* Scrollbar */
 [data-theme='ramadan'] ::-webkit-scrollbar-track {
   background: rgba(26, 26, 26, 0.5);
