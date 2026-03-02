@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore, useCartStore, useUIStore, useNotificationStore } from '@/lib/store';
 import { Button } from './ui/Button';
+import { ThemeSwitcher } from './ThemeSwitcher';
 
 export function Header() {
   const router = useRouter();
@@ -44,6 +45,9 @@ export function Header() {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-6">
+            {/* Theme Switcher */}
+            <ThemeSwitcher />
+            
             <Link
               href="/menu"
               className={`text-sm font-medium transition-colors hover:text-primary-600 ${

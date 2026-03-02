@@ -2,6 +2,50 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================
+   THEME VARIABLES
+   ============================================ */
+
+/* Light Theme (Default) */
+:root,
+[data-theme='light'] {
+  --color-primary: 59 130 246;
+  --color-primary-dark: 37 99 235;
+  --color-background: 255 255 255;
+  --color-surface: 249 250 251;
+  --color-text: 17 24 39;
+  --color-text-secondary: 107 114 128;
+  --color-border: 229 231 235;
+  --color-success: 34 197 94;
+  --color-warning: 251 146 60;
+  --color-error: 239 68 68;
+}
+
+/* Ramadan Theme */
+[data-theme='ramadan'] {
+  --color-primary: 147 51 234;
+  --color-primary-dark: 126 34 206;
+  --color-background: 250 245 255;
+  --color-surface: 243 232 255;
+  --color-text: 88 28 135;
+  --color-text-secondary: 126 34 206;
+  --color-border: 216 180 254;
+  --color-success: 34 197 94;
+  --color-warning: 251 146 60;
+  --color-error: 239 68 68;
+}
+
+/* Apply theme colors */
+body {
+  background-color: rgb(var(--color-background));
+  color: rgb(var(--color-text));
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ============================================
+   BASE STYLES
+   ============================================ */
+
 @layer base {
   html {
     @apply antialiased scroll-smooth;
@@ -243,4 +287,152 @@
 /* Smooth Transitions */
 * {
   @apply transition-colors duration-200;
+}
+
+
+/* ============================================
+   RAMADAN THEME SPECIAL EFFECTS
+   ============================================ */
+
+[data-theme='ramadan'] {
+  background-image: 
+    radial-gradient(circle at 20% 50%, rgba(147, 51, 234, 0.05) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(126, 34, 206, 0.05) 0%, transparent 50%);
+}
+
+[data-theme='ramadan'] .gradient-text {
+  background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+[data-theme='ramadan'] .glass {
+  background: rgba(243, 232, 255, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(216, 180, 254, 0.3);
+}
+
+/* Ramadan decorative stars */
+[data-theme='ramadan']::before {
+  content: '✨';
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  font-size: 2rem;
+  opacity: 0.3;
+  animation: twinkle 3s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+[data-theme='ramadan']::after {
+  content: '🌙';
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  font-size: 2rem;
+  opacity: 0.3;
+  animation: float 4s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.1); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+/* ============================================
+   DARK THEME ADJUSTMENTS
+   ============================================ */
+
+[data-theme='dark'] .glass {
+  background: rgba(15, 15, 15, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(38, 38, 38, 0.8);
+}
+
+[data-theme='dark'] .gradient-text {
+  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+[data-theme='dark'] input,
+[data-theme='dark'] textarea,
+[data-theme='dark'] select {
+  background-color: rgb(15 15 15);
+  border-color: rgb(38 38 38);
+  color: rgb(255 255 255);
+}
+
+[data-theme='dark'] input:focus,
+[data-theme='dark'] textarea:focus,
+[data-theme='dark'] select:focus {
+  border-color: rgb(96 165 250);
+  ring-color: rgb(96 165 250);
+}
+
+[data-theme='dark'] .card {
+  background-color: rgb(15 15 15);
+  border-color: rgb(38 38 38);
+}
+
+[data-theme='dark'] button:not(.btn-primary) {
+  background-color: rgb(15 15 15);
+  border-color: rgb(38 38 38);
+  color: rgb(255 255 255);
+}
+
+[data-theme='dark'] button:not(.btn-primary):hover {
+  background-color: rgb(25 25 25);
+  border-color: rgb(50 50 50);
+}
+
+/* ============================================
+   COMPONENT THEME SUPPORT
+   ============================================ */
+
+.card {
+  background-color: rgb(var(--color-surface));
+  border-color: rgb(var(--color-border));
+  transition: all 0.3s ease;
+}
+
+.btn-primary {
+  background-color: rgb(var(--color-primary));
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: rgb(var(--color-primary-dark));
+}
+
+.text-primary {
+  color: rgb(var(--color-primary));
+}
+
+.text-secondary {
+  color: rgb(var(--color-text-secondary));
+}
+
+.border-color {
+  border-color: rgb(var(--color-border));
+}
+
+/* ============================================
+   SMOOTH TRANSITIONS
+   ============================================ */
+
+* {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
 }
