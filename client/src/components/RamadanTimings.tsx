@@ -132,12 +132,19 @@ export function RamadanTimings() {
       <div className="ramadan-card">
         {/* Header */}
         <div className="ramadan-header">
-          <Moon className="w-8 h-8 text-purple-600" />
+          <Moon className="w-8 h-8 text-yellow-500" style={{ filter: 'drop-shadow(0 0 8px rgba(212, 175, 55, 0.6))' }} />
           <div className="text-center">
-            <h2 className="text-2xl font-bold text-purple-900">Ramadan Mubarak</h2>
-            <p className="text-sm text-purple-700">{todayTiming.hijriDate}</p>
+            <h2 className="text-2xl font-bold" style={{ 
+              background: 'linear-gradient(135deg, #d4af37 0%, #f4e5a1 50%, #d4af37 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text'
+            }}>
+              Ramadan Mubarak
+            </h2>
+            <p className="text-sm" style={{ color: 'rgba(212, 175, 55, 0.8)' }}>{todayTiming.hijriDate}</p>
           </div>
-          <Moon className="w-8 h-8 text-purple-600" />
+          <Moon className="w-8 h-8 text-yellow-500" style={{ filter: 'drop-shadow(0 0 8px rgba(212, 175, 55, 0.6))' }} />
         </div>
 
         {/* Timings Grid */}
@@ -145,7 +152,7 @@ export function RamadanTimings() {
           {/* Sehri Card */}
           <div className={`timing-card ${nextEvent === 'sehri' ? 'timing-card-active' : ''}`}>
             <div className="timing-icon-wrapper">
-              <Sunrise className="w-8 h-8 text-purple-600" />
+              <Sunrise className="w-8 h-8 text-yellow-500" style={{ filter: 'drop-shadow(0 0 6px rgba(212, 175, 55, 0.5))' }} />
             </div>
             <div className="timing-content">
               <h3 className="timing-label">Sehri Ends</h3>
@@ -162,7 +169,7 @@ export function RamadanTimings() {
           {/* Iftar Card */}
           <div className={`timing-card ${nextEvent === 'iftar' ? 'timing-card-active' : ''}`}>
             <div className="timing-icon-wrapper">
-              <Sunset className="w-8 h-8 text-purple-600" />
+              <Sunset className="w-8 h-8 text-yellow-500" style={{ filter: 'drop-shadow(0 0 6px rgba(212, 175, 55, 0.5))' }} />
             </div>
             <div className="timing-content">
               <h3 className="timing-label">Iftar Time</h3>
@@ -179,15 +186,15 @@ export function RamadanTimings() {
 
         {/* Current Time */}
         <div className="current-time">
-          <Clock className="w-4 h-4 text-purple-600" />
-          <span className="text-sm text-purple-700">
+          <Clock className="w-4 h-4 text-yellow-500" />
+          <span className="text-sm">
             Current Time: {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
           </span>
         </div>
 
         {/* Footer Message */}
         <div className="ramadan-footer">
-          <p className="text-xs text-purple-600 text-center">
+          <p className="text-xs text-center">
             May Allah accept your fasting and prayers
           </p>
         </div>
