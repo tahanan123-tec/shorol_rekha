@@ -28,9 +28,27 @@ export function Navigation() {
   const currentPath = mounted ? getCurrentPath() : '';
 
   return (
-    <nav className="bg-white border-b border-gray-200">
+    <nav className="bg-white border-b border-gray-200 shadow-sm">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between">
+          {/* IUT Logo and Branding */}
+          <div className="flex items-center space-x-3 py-3">
+            <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-md overflow-hidden">
+              <img 
+                src="/iut-logo.png" 
+                alt="IUT Logo" 
+                className="w-8 h-8 object-contain"
+              />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent">
+                IUT Cafeteria Admin
+              </h1>
+              <p className="text-xs text-gray-500">Islamic University of Technology</p>
+            </div>
+          </div>
+
+          {/* Navigation Links */}
           <div className="flex space-x-8">
             {navItems.map((item) => {
               const Icon = item.icon;
@@ -46,7 +64,7 @@ export function Navigation() {
                   href={externalPath}
                   className={`flex items-center space-x-2 px-3 py-4 border-b-2 transition-colors ${
                     isActive
-                      ? 'border-blue-600 text-blue-600'
+                      ? 'border-green-600 text-green-600'
                       : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
                   }`}
                 >
@@ -56,6 +74,8 @@ export function Navigation() {
               );
             })}
           </div>
+
+          {/* User Menu */}
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2 text-sm text-gray-600">
               <User className="w-4 h-4" />

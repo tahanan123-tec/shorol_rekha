@@ -36,15 +36,16 @@ export function MenuItemCard({ item, onViewDetails }: MenuItemCardProps) {
   return (
     <div className="glass rounded-2xl overflow-hidden card-hover group">
       {/* Image */}
-      <div className="relative h-48 bg-gradient-to-br from-primary-100 to-purple-100 overflow-hidden">
+      <div className="relative h-56 bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
         {item.image && (item.image.startsWith('http') || item.image.startsWith('/')) ? (
           <img
             src={item.image}
             alt={item.name}
-            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            loading="lazy"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-6xl">
+          <div className="w-full h-full flex items-center justify-center text-6xl bg-gradient-to-br from-primary-100 to-purple-100">
             {item.image || '🍽️'}
           </div>
         )}

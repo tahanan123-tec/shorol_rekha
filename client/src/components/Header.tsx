@@ -32,14 +32,20 @@ export function Header() {
     <header className="sticky top-0 z-30 glass border-b border-white/20 shadow-lg">
       <div className="max-w-7xl mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
-          {/* Logo */}
+          {/* Logo with IUT Branding */}
           <Link href="/" className="flex items-center space-x-3 group">
-            <div className="w-12 h-12 gradient-bg rounded-xl flex items-center justify-center float shadow-lg group-hover:scale-110 transition-transform">
-              <span className="text-2xl">🍽️</span>
+            <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform overflow-hidden">
+              <img 
+                src="/iut-logo.png" 
+                alt="IUT Logo" 
+                className="w-10 h-10 object-contain"
+              />
             </div>
             <div className="hidden sm:block">
-              <h1 className="text-xl font-bold gradient-text">Cafeteria</h1>
-              <p className="text-xs text-gray-500">Order System</p>
+              <h1 className="text-xl font-bold bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent">
+                IUT Cafeteria
+              </h1>
+              <p className="text-xs text-gray-500">Islamic University of Technology</p>
             </div>
           </Link>
 
