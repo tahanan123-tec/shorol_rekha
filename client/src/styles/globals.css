@@ -451,3 +451,143 @@ body {
 .animate-shimmer {
   animation: shimmer 2s infinite;
 }
+
+/* ============================================
+   RAMADAN TIMINGS COMPONENT
+   ============================================ */
+
+.ramadan-timings-container {
+  @apply relative w-full max-w-2xl mx-auto mb-8;
+}
+
+.ramadan-stars {
+  @apply absolute inset-0 pointer-events-none;
+}
+
+.ramadan-stars .star {
+  @apply absolute text-purple-400 opacity-60;
+  animation: twinkle-star 3s ease-in-out infinite;
+}
+
+.ramadan-stars .star-1 {
+  top: 10%;
+  left: 10%;
+  animation-delay: 0s;
+}
+
+.ramadan-stars .star-2 {
+  top: 20%;
+  right: 15%;
+  animation-delay: 1s;
+}
+
+.ramadan-stars .star-3 {
+  bottom: 15%;
+  left: 15%;
+  animation-delay: 2s;
+}
+
+.ramadan-stars .star-4 {
+  bottom: 20%;
+  right: 10%;
+  animation-delay: 1.5s;
+}
+
+@keyframes twinkle-star {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.2);
+  }
+}
+
+.ramadan-card {
+  @apply relative bg-gradient-to-br from-purple-50 via-pink-50 to-purple-100 rounded-2xl shadow-2xl p-6 border-2 border-purple-200;
+  backdrop-filter: blur(10px);
+  overflow: hidden;
+}
+
+.ramadan-card::before {
+  content: '';
+  @apply absolute inset-0 opacity-10;
+  background: radial-gradient(circle at 50% 50%, rgba(147, 51, 234, 0.3) 0%, transparent 70%);
+  animation: pulse-glow 4s ease-in-out infinite;
+}
+
+.ramadan-header {
+  @apply flex items-center justify-between mb-6 relative z-10;
+}
+
+.ramadan-timings-grid {
+  @apply grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 relative z-10;
+}
+
+.timing-card {
+  @apply bg-white/80 backdrop-blur-sm rounded-xl p-4 shadow-lg border border-purple-200 transition-all duration-300;
+}
+
+.timing-card:hover {
+  @apply transform scale-105 shadow-xl;
+}
+
+.timing-card-active {
+  @apply bg-gradient-to-br from-purple-100 to-pink-100 border-purple-400 shadow-xl;
+  animation: pulse-border 2s ease-in-out infinite;
+}
+
+@keyframes pulse-border {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(147, 51, 234, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(147, 51, 234, 0.6);
+  }
+}
+
+.timing-icon-wrapper {
+  @apply flex items-center justify-center mb-3;
+}
+
+.timing-content {
+  @apply text-center;
+}
+
+.timing-label {
+  @apply text-sm font-semibold text-purple-700 mb-1;
+}
+
+.timing-value {
+  @apply text-3xl font-bold text-purple-900 mb-2;
+  font-variant-numeric: tabular-nums;
+}
+
+.countdown-badge {
+  @apply inline-flex items-center space-x-2 bg-purple-600 text-white px-3 py-1 rounded-full text-sm font-semibold;
+  animation: pulse-countdown 1s ease-in-out infinite;
+}
+
+@keyframes pulse-countdown {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.current-time {
+  @apply flex items-center justify-center space-x-2 py-3 border-t border-purple-200 relative z-10;
+}
+
+.ramadan-footer {
+  @apply mt-3 pt-3 border-t border-purple-200 relative z-10;
+}
+
+/* Hide Ramadan timings in non-Ramadan themes */
+:root:not([data-theme='ramadan']) .ramadan-timings-container,
+[data-theme='light'] .ramadan-timings-container {
+  @apply hidden;
+}

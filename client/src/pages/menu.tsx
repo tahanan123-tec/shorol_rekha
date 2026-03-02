@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { MenuItemSkeleton } from '@/components/ui/Skeleton';
 import { Modal } from '@/components/ui/Modal';
+import { RamadanTimings } from '@/components/RamadanTimings';
 import { useAuthStore, useMenuStore, useCartStore } from '@/lib/store';
 import { stockAPI } from '@/lib/api';
 import type { MenuItem } from '@/types';
@@ -100,6 +101,9 @@ export default function MenuPage() {
   return (
     <Layout>
       <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Ramadan Timings - Only visible in Ramadan theme */}
+        <RamadanTimings />
+
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl md:text-5xl font-bold gradient-text mb-3">

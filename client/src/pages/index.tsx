@@ -8,6 +8,7 @@ import { useAuthStore, useOrderStore, useCartStore } from '@/lib/store';
 import { orderAPI } from '@/lib/api';
 import { connectWebSocket, subscribeToOrder, onOrderStatus, offOrderStatus } from '@/lib/websocket';
 import { OrderStatusTimeline } from '@/components/OrderStatusTimeline';
+import { RamadanTimings } from '@/components/RamadanTimings';
 import toast from 'react-hot-toast';
 import { formatCurrency } from '@/lib/utils';
 
@@ -58,6 +59,9 @@ export default function HomePage() {
   return (
     <Layout>
       <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Ramadan Timings - Only visible in Ramadan theme */}
+        <RamadanTimings />
+
         {/* Hero Section */}
         <div className="glass rounded-3xl p-8 md:p-12 mb-8 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-primary-400/20 to-purple-400/20 rounded-full blur-3xl" />
