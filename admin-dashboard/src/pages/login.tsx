@@ -56,13 +56,20 @@ export default function AdminLogin() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="max-w-md w-full">
-        {/* Logo/Header */}
+        {/* Logo/Header with IUT Branding */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-4">
-            <Lock className="w-8 h-8 text-white" />
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-2xl shadow-lg mb-4">
+            <img 
+              src="/iut-logo.png" 
+              alt="IUT Logo" 
+              className="w-16 h-16 object-contain"
+            />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-gray-600 mt-2">Sign in to manage your cafeteria</p>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent">
+            IUT Cafeteria Admin
+          </h1>
+          <p className="text-gray-600 mt-2">Islamic University of Technology</p>
+          <p className="text-sm text-gray-500 mt-1">Sign in to manage your cafeteria</p>
         </div>
 
         {/* Login Card */}
