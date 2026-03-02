@@ -13,22 +13,34 @@ export function formatCurrency(amount: number): string {
 }
 
 export function formatDate(date: string | Date): string {
+  if (!date) return 'N/A';
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return 'Invalid date';
+  
   return new Intl.DateTimeFormat('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
-  }).format(new Date(date));
+  }).format(d);
 }
 
 export function formatTime(date: string | Date): string {
+  if (!date) return 'N/A';
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return 'Invalid time';
+  
   return new Intl.DateTimeFormat('en-US', {
     hour: 'numeric',
     minute: 'numeric',
     hour12: true,
-  }).format(new Date(date));
+  }).format(d);
 }
 
 export function formatDateTime(date: string | Date): string {
+  if (!date) return 'N/A';
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return 'Invalid date';
+  
   return new Intl.DateTimeFormat('en-US', {
     year: 'numeric',
     month: 'short',
@@ -36,12 +48,16 @@ export function formatDateTime(date: string | Date): string {
     hour: 'numeric',
     minute: 'numeric',
     hour12: true,
-  }).format(new Date(date));
+  }).format(d);
 }
 
 export function formatDistanceToNow(date: string | Date): string {
+  if (!date) return 'N/A';
   const now = new Date();
   const past = new Date(date);
+  
+  if (isNaN(past.getTime())) return 'Invalid date';
+  
   const diffInSeconds = Math.floor((now.getTime() - past.getTime()) / 1000);
 
   if (diffInSeconds < 60) return 'just now';
