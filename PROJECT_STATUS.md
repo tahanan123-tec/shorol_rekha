@@ -186,16 +186,14 @@ None
 
 ## 🤝 Team & Contributors
 
-### Core Team
-- **Project Lead**: [Name]
-- **Backend Lead**: [Name]
-- **Frontend Lead**: [Name]
-- **DevOps Lead**: [Name]
+### Developer
+- **Author**: Musfikur Rahaman Tahanan
+- **Email**: tahanan@iut-dhaka.edu
+- **Institution**: Islamic University of Technology (IUT)
 
 ### Contributors
-- Total Contributors: [Number]
-- Active Contributors: [Number]
-- Community Members: [Number]
+- Primary Developer: Musfikur Rahaman Tahanan
+- Open for community contributions
 
 ## 📞 Support & Contact
 

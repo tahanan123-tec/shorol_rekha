@@ -314,12 +314,11 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for deta
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 👥 Team
+## 👥 Author
 
-- **Project Lead**: [Your Name]
-- **Backend Team**: [Team Members]
-- **Frontend Team**: [Team Members]
-- **DevOps Team**: [Team Members]
+- **Developer**: Musfikur Rahaman Tahanan
+- **Email**: tahanan@iut-dhaka.edu
+- **Institution**: Islamic University of Technology (IUT)
 
 ## 🙏 Acknowledgments
 
