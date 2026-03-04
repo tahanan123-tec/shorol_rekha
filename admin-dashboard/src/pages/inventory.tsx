@@ -1,5 +1,5 @@
 import React from 'react';
-import Navigation from '../components/Navigation';
+import { Navigation } from '../components/Navigation';
 import InventoryOverview from '../components/InventoryOverview';
 
 const InventoryPage: React.FC = () => {
