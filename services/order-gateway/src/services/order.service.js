@@ -12,10 +12,19 @@ const { orderCreatedTotal, orderProcessingDuration } = require('../utils/metrics
 const createOrder = async (user, orderData, idempotencyKey) => {
   const end = orderProcessingDuration.startTimer();
   const client = await pool.connect();
+  let stockReserved = false;
+  let dbTransactionStarted = false;
+  const orderId = `ORD-${Date.now()}-${uuidv4().substring(0, 8)}`;
   
   try {
-    const orderId = `ORD-${Date.now()}-${uuidv4().substring(0, 8)}`;
-    
+    // Validation: Ensure items array is non-empty
+    if (!orderData.items || !Array.isArray(orderData.items) || orderData.items.length === 0) {
+      throw {
+        statusCode: 400,
+        message: 'Order must contain at least one item',
+      };
+    }
+
     logger.info('Creating order', { orderId, userId: user.user_id, items: orderData.items.length });
 
     // Step 1: Check stock availability (with cache)
@@ -39,6 +48,8 @@ const createOrder = async (user, orderData, idempotencyKey) => {
     // Step 2: Reserve stock
     try {
       await stockService.reserveStock(orderId, orderData.items);
+      stockReserved = true;
+      logger.info('Stock reserved successfully', { orderId, items: orderData.items.length });
     } catch (error) {
       orderCreatedTotal.inc({ status: 'reservation_failed' });
       
@@ -50,104 +61,195 @@ const createOrder = async (user, orderData, idempotencyKey) => {
       };
     }
 
-    // Step 3: Calculate total amount from actual menu prices
+    // Step 3: Fetch full item details and calculate total amount
     let totalAmount = 0;
+    let enrichedItems = [];
     try {
-      // Fetch prices from stock service for all items
-      const itemIds = orderData.items.map(item => item.id);
-      const priceResponse = await stockService.getItemPrices(itemIds);
+      // Fetch full menu to get item details (name, price, etc.)
+      const menuResponse = await stockService.getMenuItems();
       
-      totalAmount = orderData.items.reduce((sum, item) => {
-        const itemPrice = priceResponse[item.id] || 0;
-        return sum + (itemPrice * item.quantity);
+      // Create a map of menu items by ID for quick lookup
+      const menuMap = {};
+      if (menuResponse && menuResponse.length > 0) {
+        menuResponse.forEach(menuItem => {
+          menuMap[String(menuItem.id)] = menuItem;
+        });
+      }
+      
+      // Enrich order items with full details
+      enrichedItems = orderData.items.map(item => {
+        const menuItem = menuMap[String(item.id)];
+        if (!menuItem) {
+          logger.warn('Menu item not found', { itemId: item.id });
+          return {
+            id: item.id,
+            name: `Item ${item.id}`,
+            quantity: item.quantity,
+            price: 0,
+          };
+        }
+        
+        return {
+          id: menuItem.id,
+          name: menuItem.name,
+          quantity: item.quantity,
+          price: parseFloat(menuItem.price),
+          category: menuItem.category,
+          image_url: menuItem.image_url,
+        };
+      });
+      
+      // Calculate total
+      totalAmount = enrichedItems.reduce((sum, item) => {
+        return sum + (item.price * item.quantity);
       }, 0);
       
-      logger.info('Order total calculated', { orderId, totalAmount, items: orderData.items.length });
+      logger.info('Order total calculated', { orderId, totalAmount, items: enrichedItems.length });
     } catch (error) {
-      logger.error('Failed to fetch item prices, using fallback', { orderId, error: error.message });
-      // Fallback: use a default price if price fetch fails
-      totalAmount = orderData.items.reduce((sum, item) => sum + (10.00 * item.quantity), 0);
+      logger.error('Failed to fetch menu items, using minimal data', { orderId, error: error.message });
+      // Fallback: use minimal item data
+      enrichedItems = orderData.items.map(item => ({
+        id: item.id,
+        name: `Item ${item.id}`,
+        quantity: item.quantity,
+        price: 10.00,
+      }));
+      totalAmount = enrichedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     }
 
     // Step 4: Save order to database
-    await client.query('BEGIN');
-
-    const insertResult = await client.query(
-      `INSERT INTO orders (
-        order_id, user_id, student_id, items, total_amount, 
-        status, delivery_time, idempotency_key, created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
-      RETURNING *`,
-      [
-        orderId,
-        user.user_id,
-        user.student_id,
-        JSON.stringify(orderData.items),
-        totalAmount,
-        'PENDING',
-        orderData.delivery_time || null,
-        idempotencyKey,
-      ]
-    );
-
-    await client.query('COMMIT');
-
-    const order = insertResult.rows[0];
-
-    // Step 5: Publish to Kitchen Queue
     try {
-      await queueService.publishOrderCreated({
+      await client.query('BEGIN');
+      dbTransactionStarted = true;
+
+      const insertResult = await client.query(
+        `INSERT INTO orders (
+          order_id, user_id, student_id, items, total_amount, 
+          status, delivery_time, idempotency_key, created_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+        RETURNING *`,
+        [
+          orderId,
+          user.user_id,
+          user.student_id,
+          JSON.stringify(enrichedItems),
+          totalAmount,
+          'PENDING',
+          orderData.delivery_time || null,
+          idempotencyKey,
+        ]
+      );
+
+      await client.query('COMMIT');
+      dbTransactionStarted = false;
+
+      const order = insertResult.rows[0];
+
+      // Step 5: Publish to Kitchen Queue
+      try {
+        await queueService.publishOrderCreated({
+          order_id: order.order_id,
+          user_id: order.user_id,
+          student_id: order.student_id,
+          items: order.items,
+          total_amount: parseFloat(order.total_amount),
+          delivery_time: order.delivery_time,
+          created_at: order.created_at,
+        });
+      } catch (error) {
+        logger.error('Failed to publish order to queue', { orderId, error: error.message });
+        // Order is saved, but queue publish failed - will be retried by background job
+      }
+
+      // Step 6: Cache the order
+      await cacheService.setOrder(orderId, {
         order_id: order.order_id,
-        user_id: order.user_id,
-        student_id: order.student_id,
+        status: order.status,
+        items: order.items,
+        total_amount: parseFloat(order.total_amount),
+        created_at: order.created_at,
+      });
+
+      orderCreatedTotal.inc({ status: 'success' });
+      
+      logger.info('Order created successfully', { 
+        orderId, 
+        userId: user.user_id,
+        totalAmount 
+      });
+
+      // Calculate ETA (mock - 5 minutes from now)
+      const eta = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+
+      return {
+        order_id: order.order_id,
+        status: order.status,
         items: order.items,
         total_amount: parseFloat(order.total_amount),
         delivery_time: order.delivery_time,
+        eta,
         created_at: order.created_at,
-      });
-    } catch (error) {
-      logger.error('Failed to publish order to queue', { orderId, error: error.message });
-      // Order is saved, but queue publish failed - will be retried by background job
+      };
+    } catch (dbError) {
+      // Database transaction failed - rollback if started
+      if (dbTransactionStarted) {
+        try {
+          await client.query('ROLLBACK');
+          logger.info('Database transaction rolled back', { orderId });
+        } catch (rollbackError) {
+          logger.error('Failed to rollback database transaction', { 
+            orderId, 
+            error: rollbackError.message 
+          });
+        }
+      }
+      
+      throw dbError;
     }
-
-    // Step 6: Cache the order
-    await cacheService.setOrder(orderId, {
-      order_id: order.order_id,
-      status: order.status,
-      items: order.items,
-      total_amount: parseFloat(order.total_amount),
-      created_at: order.created_at,
-    });
-
-    orderCreatedTotal.inc({ status: 'success' });
-    
-    logger.info('Order created successfully', { 
-      orderId, 
-      userId: user.user_id,
-      totalAmount 
-    });
-
-    // Calculate ETA (mock - 5 minutes from now)
-    const eta = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-
-    return {
-      order_id: order.order_id,
-      status: order.status,
-      items: order.items,
-      total_amount: parseFloat(order.total_amount),
-      delivery_time: order.delivery_time,
-      eta,
-      created_at: order.created_at,
-    };
   } catch (error) {
-    await client.query('ROLLBACK');
+    // Compensating transaction: Release reserved stock if reservation succeeded
+    if (stockReserved) {
+      logger.warn('Order creation failed after stock reservation, releasing stock', { 
+        orderId, 
+        error: error.message 
+      });
+      
+      try {
+        const releaseResult = await stockService.releaseStock(orderId, orderData.items);
+        if (releaseResult.success) {
+          logger.info('Stock released successfully (compensating transaction)', { orderId });
+        } else {
+          logger.error('Failed to release stock (compensating transaction)', { 
+            orderId, 
+            error: releaseResult.error 
+          });
+        }
+      } catch (releaseError) {
+        logger.error('Exception during stock release (compensating transaction)', { 
+          orderId, 
+          error: releaseError.message 
+        });
+      }
+    }
+    
+    // Rollback database transaction if it was started
+    if (dbTransactionStarted) {
+      try {
+        await client.query('ROLLBACK');
+      } catch (rollbackError) {
+        logger.error('Failed to rollback transaction', { 
+          orderId, 
+          error: rollbackError.message 
+        });
+      }
+    }
     
     if (error.statusCode) {
       throw error;
     }
 
     orderCreatedTotal.inc({ status: 'error' });
-    logger.error('Order creation failed', { error: error.message, userId: user.user_id });
+    logger.error('Order creation failed', { error: error.message, userId: user.user_id, orderId });
     throw error;
   } finally {
     client.release();
@@ -183,11 +285,14 @@ const getOrderStatus = async (orderId, userId) => {
 
     const order = result.rows[0];
 
+    // Parse items if it's a JSON string
+    const parsedItems = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+
     // Cache the result
     const orderData = {
       order_id: order.order_id,
       status: order.status,
-      items: order.items,
+      items: parsedItems,
       total_amount: parseFloat(order.total_amount),
       delivery_time: order.delivery_time,
       created_at: order.created_at,
@@ -224,7 +329,7 @@ const getUserOrders = async (userId, limit = 20, offset = 0) => {
     return result.rows.map(order => ({
       order_id: order.order_id,
       status: order.status,
-      items: order.items,
+      items: typeof order.items === 'string' ? JSON.parse(order.items) : order.items,
       total_amount: parseFloat(order.total_amount),
       delivery_time: order.delivery_time,
       created_at: order.created_at,
@@ -261,7 +366,7 @@ const getAllOrders = async (limit = 100, offset = 0, status = null) => {
       order_id: order.order_id,
       user_id: order.user_id,
       status: order.status,
-      items: order.items,
+      items: typeof order.items === 'string' ? JSON.parse(order.items) : order.items,
       total_amount: parseFloat(order.total_amount),
       delivery_time: order.delivery_time,
       created_at: order.created_at,
@@ -298,7 +403,7 @@ const updateOrderStatus = async (orderId, newStatus) => {
       order_id: order.order_id,
       user_id: order.user_id,
       status: order.status,
-      items: order.items,
+      items: typeof order.items === 'string' ? JSON.parse(order.items) : order.items,
       total_amount: parseFloat(order.total_amount),
       delivery_time: order.delivery_time,
       created_at: order.created_at,

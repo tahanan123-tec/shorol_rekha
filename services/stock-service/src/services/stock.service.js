@@ -161,6 +161,7 @@ const checkStock = async (items) => {
 const reserveStock = async (orderId, items, attempt = 1) => {
   const end = stockReservationDuration.startTimer();
   const client = await pool.connect();
+  // Generate a unique transaction ID for each attempt - UUID is already unique
   const transactionId = uuidv4();
 
   try {
@@ -173,40 +174,57 @@ const reserveStock = async (orderId, items, attempt = 1) => {
       transactionId,
     });
 
-    const reservations = [];
+    // Fetch all items in a single query for better performance
+    const itemIds = items.map(item => item.id);
+    const selectResult = await client.query(
+      `SELECT id, item_id, item_name, quantity, reserved_quantity, version, price
+       FROM inventory
+       WHERE item_id = ANY($1)
+       FOR UPDATE`,
+      [itemIds]
+    );
 
+    // Create a map for quick lookup
+    const stockMap = new Map(
+      selectResult.rows.map(row => [row.item_id, row])
+    );
+
+    // Validate all items exist and have sufficient stock
+    const unavailableItems = [];
     for (const item of items) {
-      // SELECT FOR UPDATE to lock the row
-      const selectResult = await client.query(
-        `SELECT id, item_id, item_name, quantity, reserved_quantity, version, price
-         FROM inventory
-         WHERE item_id = $1
-         FOR UPDATE`,
-        [item.id]
-      );
-
-      if (selectResult.rows.length === 0) {
+      const currentStock = stockMap.get(item.id);
+      
+      if (!currentStock) {
         throw {
           statusCode: 404,
           message: `Item ${item.id} not found`,
         };
       }
 
-      const currentStock = selectResult.rows[0];
       const availableQuantity = currentStock.quantity - currentStock.reserved_quantity;
-
-      // Check if sufficient stock is available
       if (availableQuantity < item.quantity) {
-        throw {
-          statusCode: 409,
-          message: 'Insufficient stock',
-          details: {
-            item_id: item.id,
-            available: availableQuantity,
-            requested: item.quantity,
-          },
-        };
+        unavailableItems.push({
+          item_id: item.id,
+          available: availableQuantity,
+          requested: item.quantity,
+        });
       }
+    }
+
+    // If any item is unavailable, fail the entire order
+    if (unavailableItems.length > 0) {
+      throw {
+        statusCode: 409,
+        message: 'Insufficient stock for one or more items',
+        details: unavailableItems,
+      };
+    }
+
+    // Process all updates and inserts
+    const reservations = [];
+    
+    for (const item of items) {
+      const currentStock = stockMap.get(item.id);
 
       // Update with optimistic locking (version check)
       const updateResult = await client.query(
@@ -505,10 +523,151 @@ const decrementStock = async (orderId, items, transactionIdempotencyKey) => {
   }
 };
 
+/**
+ * Release reserved stock (compensating transaction)
+ * Used when order creation fails after stock reservation
+ */
+const releaseStock = async (orderId, items) => {
+  const client = await pool.connect();
+  const transactionId = uuidv4();
+
+  try {
+    await client.query('BEGIN');
+
+    logger.info('Releasing reserved stock', {
+      orderId,
+      items: items.length,
+      transactionId,
+    });
+
+    const releases = [];
+
+    for (const item of items) {
+      const selectResult = await client.query(
+        `SELECT id, item_id, item_name, quantity, reserved_quantity, version
+         FROM inventory
+         WHERE item_id = $1
+         FOR UPDATE`,
+        [item.id]
+      );
+
+      if (selectResult.rows.length === 0) {
+        logger.warn('Item not found during stock release', { itemId: item.id, orderId });
+        continue; // Skip missing items
+      }
+
+      const currentStock = selectResult.rows[0];
+
+      // Release reserved quantity (decrease reserved_quantity)
+      const updateResult = await client.query(
+        `UPDATE inventory
+         SET reserved_quantity = GREATEST(reserved_quantity - $1, 0),
+             version = version + 1,
+             updated_at = NOW()
+         WHERE item_id = $2
+         RETURNING id, item_id, item_name, quantity, reserved_quantity, version`,
+        [item.quantity, item.id]
+      );
+
+      if (updateResult.rows.length === 0) {
+        logger.warn('Failed to release stock for item', { itemId: item.id, orderId });
+        continue;
+      }
+
+      const updatedStock = updateResult.rows[0];
+
+      // Record transaction
+      await client.query(
+        `INSERT INTO stock_transactions (
+          transaction_id, item_id, order_id, transaction_type,
+          quantity_change, quantity_before, quantity_after,
+          version_before, version_after, metadata
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        [
+          transactionId,
+          item.id,
+          orderId,
+          'RELEASE',
+          -item.quantity,
+          currentStock.reserved_quantity,
+          updatedStock.reserved_quantity,
+          currentStock.version,
+          updatedStock.version,
+          JSON.stringify({ reason: 'order_creation_failed' }),
+        ]
+      );
+
+      releases.push({
+        item_id: updatedStock.item_id,
+        item_name: updatedStock.item_name,
+        quantity_released: item.quantity,
+        reserved_after: updatedStock.reserved_quantity,
+        version: updatedStock.version,
+      });
+
+      // Update gauge metric
+      stockLevelGauge.set(
+        { item_id: updatedStock.item_id, item_name: updatedStock.item_name },
+        updatedStock.quantity - updatedStock.reserved_quantity
+      );
+    }
+
+    await client.query('COMMIT');
+
+    stockTransactionTotal.inc({ type: 'release', status: 'success' });
+
+    logger.info('Stock released successfully', {
+      orderId,
+      transactionId,
+      releases: releases.length,
+    });
+
+    // Publish events
+    setImmediate(async () => {
+      try {
+        for (const release of releases) {
+          await queueService.publishStockReleased({
+            order_id: orderId,
+            item_id: release.item_id,
+            quantity: release.quantity_released,
+          });
+        }
+      } catch (error) {
+        logger.error('Failed to publish stock release events', { error: error.message });
+      }
+    });
+
+    return {
+      success: true,
+      transaction_id: transactionId,
+      releases,
+    };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    
+    stockTransactionTotal.inc({ type: 'release', status: 'error' });
+
+    logger.error('Stock release failed', {
+      orderId,
+      transactionId,
+      error: error.message,
+    });
+    
+    // Don't throw - this is a compensating transaction, log and continue
+    return {
+      success: false,
+      error: error.message,
+    };
+  } finally {
+    client.release();
+  }
+};
+
 module.exports = {
   getStock,
   getAllStock,
   checkStock,
   reserveStock,
+  releaseStock,
   decrementStock,
 };

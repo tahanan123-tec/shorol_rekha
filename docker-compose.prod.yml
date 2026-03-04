@@ -1,0 +1,75 @@
+# Production Docker Compose Configuration
+# This file contains production-ready settings with proper security
+
+version: '3.8'
+
+services:
+  # Nginx - Reverse Proxy (Production Settings)
+  nginx:
+    build: ./infrastructure/nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - order-gateway
+      - identity-provider
+      - client
+      - admin-dashboard
+    networks:
+      - frontend
+      - backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Client Application (Production)
+  client:
+    build: ./client
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://localhost
+      - NEXT_PUBLIC_WS_URL=ws://localhost/socket.io
+    depends_on:
+      - order-gateway
+      - notification-hub
+    networks:
+      - frontend
+    restart: unless-stopped
+
+  # Admin Dashboard (Production)
+  admin-dashboard:
+    build:
+      context: ./admin-dashboard
+      args:
+        NEXT_PUBLIC_PROMETHEUS_URL: http://localhost:9090
+        NEXT_PUBLIC_SERVICES_BASE_URL: http://localhost
+        NEXT_PUBLIC_CHAOS_API_URL: http://localhost:3006
+    ports:
+      - "3100:3100"
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - prometheus
+      - chaos-monkey
+      - identity-provider
+      - order-gateway
+      - stock-service
+      - kitchen-queue
+      - notification-hub
+    networks:
+      - monitoring
+      - frontend
+    restart: unless-stopped
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
+  monitoring:
+    driver: bridge

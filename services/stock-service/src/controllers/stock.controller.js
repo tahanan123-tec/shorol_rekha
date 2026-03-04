@@ -169,10 +169,55 @@ const decrementStock = async (req, res, next) => {
   }
 };
 
+/**
+ * POST /internal/stock/release
+ * Release reserved stock (compensating transaction)
+ */
+const releaseStock = async (req, res, next) => {
+  try {
+    const { order_id, items } = req.body;
+
+    if (!order_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'order_id is required',
+      });
+    }
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Items array is required',
+      });
+    }
+
+    const result = await stockService.releaseStock(order_id, items);
+
+    res.status(200).json({
+      success: true,
+      message: 'Stock released successfully',
+      data: result,
+    });
+  } catch (error) {
+    // Don't fail hard on release errors - log and return success
+    logger.error('Stock release endpoint error', { 
+      orderId: req.body.order_id, 
+      error: error.message 
+    });
+    
+    res.status(200).json({
+      success: false,
+      message: 'Stock release failed but logged',
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getStock,
   getAllStock,
   checkStock,
   reserveStock,
+  releaseStock,
   decrementStock,
 };

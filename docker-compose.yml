@@ -9,8 +9,12 @@ services:
       - "443:443"
     depends_on:
       - order-gateway
+      - identity-provider
+      - client
+      - admin-dashboard
     networks:
       - frontend
+      - backend
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/health"]
@@ -61,6 +65,7 @@ services:
       - RABBITMQ_URL=amqp://admin:admin@rabbitmq:5672
       - IDENTITY_SERVICE_URL=http://identity-provider:3001
       - STOCK_SERVICE_URL=http://stock-service:3003
+      - INTERNAL_API_KEY=internal-secret-key
       - JWT_PUBLIC_KEY_PATH=/run/secrets/jwt_public_key
       - CACHE_TTL_MENU=300
       - CACHE_TTL_STOCK=30
@@ -105,7 +110,7 @@ services:
       - PORT=3003
       - DATABASE_URL=postgresql://inventory_user:inventory_pass@postgres:5432/inventory_db
       - RABBITMQ_URL=amqp://admin:admin@rabbitmq:5672
-      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+      - INTERNAL_API_KEY=internal-secret-key
     depends_on:
       postgres:
         condition: service_healthy
@@ -232,7 +237,7 @@ services:
     ports:
       - "3100:3100"
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=development
     depends_on:
       - prometheus
       - chaos-monkey
@@ -262,9 +267,9 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=http://order-gateway:3002
-      - NEXT_PUBLIC_WS_URL=http://notification-hub:3005
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost
+      - NEXT_PUBLIC_WS_URL=ws://localhost/socket.io
     depends_on:
       - order-gateway
       - notification-hub

@@ -5,7 +5,7 @@ module.exports = {
   },
   stockService: {
     url: process.env.STOCK_SERVICE_URL || 'http://stock-service:3003',
-    timeout: parseInt(process.env.STOCK_SERVICE_TIMEOUT || '3000', 10),
+    timeout: parseInt(process.env.STOCK_SERVICE_TIMEOUT || '10000', 10), // 10 seconds for multi-item orders
   },
   rabbitmq: {
     url: process.env.RABBITMQ_URL || 'amqp://admin:admin@rabbitmq:5672',
@@ -26,7 +26,7 @@ module.exports = {
     },
   },
   circuitBreaker: {
-    timeout: 3000, // 3 seconds
+    timeout: 10000, // 10 seconds - increased for multi-item orders
     errorThresholdPercentage: 50,
     resetTimeout: 30000, // 30 seconds
   },

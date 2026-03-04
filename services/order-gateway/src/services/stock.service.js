@@ -276,8 +276,83 @@ const getItemPrices = async (itemIds) => {
   }
 };
 
+/**
+ * Get menu items from Stock Service
+ */
+const getMenuItems = async () => {
+  try {
+    const response = await axios.get(
+      `${config.stockService.url}/api/menu`,
+      {
+        timeout: config.stockService.timeout,
+        headers: {
+          'X-Internal-API-Key': process.env.INTERNAL_API_KEY || 'dev-key',
+        },
+      }
+    );
+
+    if (response.data.success && response.data.data?.items) {
+      return response.data.data.items;
+    }
+    
+    return [];
+  } catch (error) {
+    logger.error('Failed to fetch menu items', {
+      error: error.message,
+      status: error.response?.status,
+    });
+    throw error;
+  }
+};
+
+/**
+ * Release reserved stock (compensating transaction)
+ */
+const releaseStock = async (orderId, items) => {
+  const start = Date.now();
+  
+  try {
+    const response = await axios.post(
+      `${config.stockService.url}/api/internal/stock/release`,
+      { order_id: orderId, items },
+      {
+        timeout: config.stockService.timeout,
+        headers: {
+          'X-Internal-API-Key': process.env.INTERNAL_API_KEY || 'dev-key',
+        },
+      }
+    );
+
+    const duration = (Date.now() - start) / 1000;
+    externalServiceCallDuration.observe(
+      { service: 'stock-service', endpoint: '/stock/release', status: 'success' },
+      duration
+    );
+
+    logger.info('Stock released successfully', { orderId, items: items.length });
+    return response.data;
+  } catch (error) {
+    const duration = (Date.now() - start) / 1000;
+    externalServiceCallDuration.observe(
+      { service: 'stock-service', endpoint: '/stock/release', status: 'error' },
+      duration
+    );
+
+    logger.error('Stock release failed', {
+      error: error.message,
+      status: error.response?.status,
+      orderId,
+    });
+    
+    // Don't throw - this is a compensating transaction
+    return { success: false, error: error.message };
+  }
+};
+
 module.exports = {
   checkStock,
   reserveStock,
+  releaseStock,
   getItemPrices,
+  getMenuItems,
 };

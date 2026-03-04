@@ -70,3 +70,22 @@ pids/
 *.pid
 *.seed
 *.pid.lock
+
+# Test scripts (temporary)
+test-*.ps1
+test-*.js
+test-*.sh
+check-*.ps1
+quick-*.sh
+QUICK_ANSWER.txt
+
+# Legacy documentation (keep in docs/legacy/)
+*_FIX.md
+*_COMPLETE.md
+*_DIAGNOSIS.md
+*_SUCCESS.md
+GIT_*.md
+WHAT_TO_DO_NOW.md
+START_HERE.md
+BEFORE_VS_AFTER.md
+README_GIT_STATUS.md
