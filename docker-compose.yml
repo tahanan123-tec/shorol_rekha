@@ -238,6 +238,9 @@ services:
       - "3100:3100"
     environment:
       - NODE_ENV=development
+    volumes:
+      - ./admin-dashboard/src:/app/src
+      - ./admin-dashboard/public:/app/public
     depends_on:
       - prometheus
       - chaos-monkey
