@@ -4,6 +4,9 @@ const { validateInternalApiKey } = require('../middleware/auth.middleware');
 
 const router = express.Router();
 
+// Admin endpoint (must be before /stock/:itemId to avoid conflict)
+router.get('/admin/stock', validateInternalApiKey, stockController.getAdminInventory);
+
 // Public endpoints (read-only)
 router.get('/stock/:itemId', stockController.getStock);
 router.get('/stock', stockController.getAllStock);

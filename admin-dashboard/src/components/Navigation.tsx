@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useState, useEffect } from 'react';
-import { Activity, UtensilsCrossed, ShoppingCart, LogOut, User } from 'lucide-react';
+import { Activity, UtensilsCrossed, ShoppingCart, LogOut, User, Package } from 'lucide-react';
 import { useAdminAuth } from '@/lib/auth';
 
 export function Navigation() {
@@ -17,6 +17,7 @@ export function Navigation() {
     { href: '/admin', label: 'Dashboard', icon: Activity },
     { href: '/admin/menu', label: 'Menu Management', icon: UtensilsCrossed },
     { href: '/admin/orders', label: 'Orders', icon: ShoppingCart },
+    { href: '/admin/inventory', label: 'Inventory', icon: Package },
   ];
 
   // Since admin dashboard is served at /admin, we need to check the actual browser path
@@ -55,7 +56,8 @@ export function Navigation() {
               // Map internal paths to external paths
               const externalPath = item.href === '/admin' ? '/admin' : 
                                    item.href === '/admin/menu' ? '/admin/menu' :
-                                   item.href === '/admin/orders' ? '/admin/orders' : item.href;
+                                   item.href === '/admin/orders' ? '/admin/orders' :
+                                   item.href === '/admin/inventory' ? '/admin/inventory' : item.href;
               const isActive = mounted && currentPath === externalPath;
 
               return (

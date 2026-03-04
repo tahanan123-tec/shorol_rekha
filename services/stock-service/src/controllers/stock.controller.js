@@ -213,6 +213,32 @@ const releaseStock = async (req, res, next) => {
   }
 };
 
+/**
+ * GET /admin/stock
+ * Get inventory overview for admin dashboard (ADMIN only)
+ */
+const getAdminInventory = async (req, res, next) => {
+  try {
+    logger.info('Admin inventory request received', {
+      service: 'stock-service',
+      user: req.user?.email || 'unknown'
+    });
+
+    const result = await stockService.getAdminInventory();
+
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    logger.error('Admin inventory endpoint error', { 
+      error: error.message,
+      stack: error.stack
+    });
+    next(error);
+  }
+};
+
 module.exports = {
   getStock,
   getAllStock,
@@ -220,4 +246,5 @@ module.exports = {
   reserveStock,
   releaseStock,
   decrementStock,
+  getAdminInventory,
 };

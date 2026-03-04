@@ -287,6 +287,46 @@ export const stopAllChaos = async (): Promise<boolean> => {
   }
 };
 
+// Get admin inventory overview
+export interface InventoryItem {
+  id: number;
+  name: string;
+  category: string;
+  available_quantity: number;
+  reserved_quantity: number;
+  total_quantity: number;
+  price: number;
+  image: string;
+  updated_at: string;
+  low_stock: boolean;
+}
+
+export interface InventorySummary {
+  total_items: number;
+  total_available: number;
+  low_stock_count: number;
+}
+
+export interface AdminInventoryResponse {
+  items: InventoryItem[];
+  summary: InventorySummary;
+}
+
+export const getAdminInventory = async (): Promise<AdminInventoryResponse> => {
+  try {
+    const response = await axios.get(`${SERVICES_BASE_URL}/admin/stock`, {
+      headers: {
+        'X-Internal-API-Key': process.env.NEXT_PUBLIC_INTERNAL_API_KEY || 'dev-secret-key-change-in-production',
+      },
+      timeout: 10000,
+    });
+    return response.data.data;
+  } catch (error) {
+    console.error('Error fetching admin inventory:', error);
+    throw error;
+  }
+};
+
 export default {
   checkServiceHealth,
   checkAllServicesHealth,
@@ -302,4 +342,5 @@ export default {
   simulateBrokerFailure,
   getChaosStatus,
   stopAllChaos,
+  getAdminInventory,
 };
